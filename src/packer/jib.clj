@@ -1,13 +1,20 @@
 (ns packer.jib
   "Data driven wrapper for Google Jib."
   (:require [packer.misc :as misc])
-  (:import [com.google.cloud.tools.jib.api AbsoluteUnixPath Containerizer Jib JibContainerBuilder LogEvent TarImage]
-           java.util.function.Consumer))
+  (:import [com.google.cloud.tools.jib.api Containerizer Jib JibContainerBuilder LogEvent TarImage]
+           com.google.cloud.tools.jib.event.events.ProgressEvent))
 
 (def ^:private log-event-handler
-  (reify Consumer
-    (accept [_ log-event]
-      (misc/log (.getLevel log-event) "jib" (.getMessage log-event)))))
+  (misc/java-consumer
+   #(misc/log (.getLevel %) "jib" (.getMessage %))))
+
+(def ^:private progress-event-handler
+  (misc/java-consumer (fn [^ProgressEvent progress-event]
+                        (misc/log :progress "jib" "%s (%.2f%%)"
+                                  (.. progress-event getAllocation getDescription)
+                                  (* (.. progress-event getAllocation getFractionOfRoot)
+                                     (.getUnits progress-event)
+                                     100)))))
 
 (defn- containerizer
   [{:image/keys [^String name ^String tar-archive]}]
@@ -15,7 +22,8 @@
   (.. Containerizer
       (to (.. TarImage (at (misc/string->java-path tar-archive))
               (named name)))
-      (addEventHandler LogEvent log-event-handler)))
+      (addEventHandler LogEvent log-event-handler)
+      (addEventHandler ProgressEvent progress-event-handler)))
 
 (defn- containerize*
   [^JibContainerBuilder container-builder options]
