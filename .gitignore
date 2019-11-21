@@ -1,3 +1,5 @@
+*.tar
+.packer
 .cpcache
 .nrepl-port
 logs
