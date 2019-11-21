@@ -5,11 +5,12 @@
            com.google.cloud.tools.jib.api.AbsoluteUnixPath
            java.io.File
            [java.nio.file Path Paths]
-           java.util.ArrayList))
+           java.util.ArrayList
+           java.util.function.Consumer))
 
 (defn sequential->java-list ^ArrayList
   [^Sequential seq]
-  (java.util.ArrayList. seq))
+  (ArrayList. seq))
 
 (defn string->java-path ^Path
   [^String path]
@@ -18,6 +19,16 @@
 (defn string->absolute-unix-path ^AbsoluteUnixPath
   [^String path]
   (AbsoluteUnixPath/get path))
+
+(defn java-consumer
+  "Returns a java.util.function.Consumer instance that calls the function f.
+
+  f is a 1-arity function that returns nothing."
+  ^Consumer
+  [f]
+  (reify Consumer
+    (accept [_ arg]
+      (f arg))))
 
 (defn log
   [level emitter message & args]
@@ -34,7 +45,7 @@
 
 (defmacro with-clean-dir
   "binding => [binding-symbol binding-value]
-  binding-symbol => java.io.File
+  binding-value => java.io.File
 
   Evaluates body in a context where the directory assigned to
   binding-symbol exists and is an empty directory."
