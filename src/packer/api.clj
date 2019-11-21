@@ -39,3 +39,7 @@
                                 :name image-name
                                 :tar-archive output
                                 :layers image-layers}))))
+
+(comment (containerize {:image-name "heimdall"
+                        :input (io/file "/home/alangh/dev/nu/heimdall/target/heimdall-0.1.0-SNAPSHOT-standalone.jar")
+                        :output "heimdall.tar"}))
