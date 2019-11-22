@@ -2,8 +2,8 @@
  :deps
  {org.clojure/clojure #:mvn{:version "1.10.0"}
   org.clojure/data.json #:mvn{:version "0.2.6"}
-  com.google.cloud.tools/jib-core #:mvn{:version "0.12.0"}
-  }
+  org.clojure/tools.cli #:mvn{:version "0.4.2"}
+  com.google.cloud.tools/jib-core #:mvn{:version "0.12.0"}}
  :aliases
  {:dev
   {:extra-paths ["dev/resources" "test"]
