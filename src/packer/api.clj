@@ -1,6 +1,6 @@
 (ns packer.api
   (:require [clojure.java.io :as io]
-            [packer.heuristics :as heuristics]
+            [packer.image :as heuristics]
             [packer.jib :as jib]
             [packer.misc :as misc :refer [with-clean-dir]])
   (:import java.io.File
