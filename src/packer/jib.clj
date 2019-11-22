@@ -1,8 +1,10 @@
 (ns packer.jib
-  "Data driven wrapper for Google Jib."
+  "Clojure wrapper for Google Jib."
   (:require [packer.misc :as misc])
-  (:import [com.google.cloud.tools.jib.api Containerizer Jib JibContainerBuilder LogEvent TarImage]
-           com.google.cloud.tools.jib.event.events.ProgressEvent))
+  (:import [com.google.cloud.tools.jib.api Containerizer ImageReference Jib JibContainerBuilder LogEvent RegistryImage TarImage]
+           com.google.cloud.tools.jib.event.events.ProgressEvent
+           com.google.cloud.tools.jib.frontend.CredentialRetrieverFactory
+           java.time.Instant))
 
 (def ^:private log-event-handler
   (misc/java-consumer
@@ -16,12 +18,19 @@
                                      (.getUnits progress-event)
                                      100)))))
 
+(defn- image-reference
+  "Returns a new image reference from the provided values."
+  ^ImageReference
+  [{:image/keys [^String registry ^String repository ^String tag]}]
+  (ImageReference/of registry repository tag))
+
 (defn- containerizer
-  [{:image/keys [^String name ^String tar-archive]}]
-  {:pre [name tar-archive]}
+  [{:image/keys [name ^String tar-path]}]
+  {:pre [name tar-path]}
   (.. Containerizer
-      (to (.. TarImage (at (misc/string->java-path tar-archive))
-              (named name)))
+      (to (.. TarImage (at (misc/string->java-path tar-path))
+              (named (image-reference name))))
+      (setToolName "packer")
       (addEventHandler LogEvent log-event-handler)
       (addEventHandler ProgressEvent progress-event-handler)))
 
@@ -37,9 +46,28 @@
                          (misc/string->absolute-unix-path target)))
             container-builder layers)))
 
+(defn- registry-image
+  "Returns a new registry image."
+  ^RegistryImage
+  [from]
+  (let [reference (image-reference from)
+        retriever (.. CredentialRetrieverFactory (forImage reference log-event-handler)
+                      dockerConfig)]
+    (.. RegistryImage (named reference)
+        (addCredentialRetriever retriever))))
+
+(defn- container-builder
+  "Returns a new container builder to start building the image.
+
+  from represents the descriptor of the base image."
+  ^JibContainerBuilder
+  [from]
+  (.. Jib (from (registry-image from))
+      (setCreationTime (Instant/now))))
+
 (defn containerize
-  [{:image/keys [^String from layers] :as options}]
+  [{:image/keys [from layers] :as options}]
   {:pre [from layers]}
-  (-> (Jib/from from)
+  (-> (container-builder from)
       (add-layers layers)
       (containerize* options)))
