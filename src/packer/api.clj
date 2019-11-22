@@ -1,6 +1,6 @@
 (ns packer.api
   (:require [clojure.java.io :as io]
-            [packer.image :as heuristics]
+            [packer.image :as image]
             [packer.jib :as jib]
             [packer.misc :as misc :refer [with-clean-dir]])
   (:import java.io.File
@@ -28,17 +28,15 @@
 (defn containerize
   "Turns an input jar into a lightweight container according to the
   provided options."
-  [{:keys [image-name input output]}]
-  {:pre [image-name input output]}
+  [{:keys [app-root input manifest output]}]
+  {:pre [input manifest output]}
   (with-clean-dir [dest-dir (io/file ".packer")]
-    (let [files (unpack-jar input dest-dir)
-          image-layers (heuristics/create-image-layers {:project/files files
-                                                        :project/source-files ["heimdall"]
-                                                        :image.layer/target-path "/opt/deploy"})]
-      (jib/containerize #:image{:from "openjdk:alpine"
-                                :name image-name
-                                :tar-archive output
-                                :layers image-layers}))))
+    (let [all-files (unpack-jar input dest-dir)
+          image-descriptor (image/describe-image manifest {:files all-files
+                                                           :known-source-files ["heimdall"
+                                                                                :app-root app-root
+                                                                                :output output]})]
+      (jib/containerize image-descriptor))))
 
 (comment (containerize {:image-name "heimdall"
                         :input (io/file "/home/alangh/dev/nu/heimdall/target/heimdall-0.1.0-SNAPSHOT-standalone.jar")

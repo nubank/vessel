@@ -13,10 +13,10 @@
        (not (string/ends-with? (.getName file) ".class"))))
 
 (defn- source-file?
-  [^File file {:keys [source-files]}]
-  {:pre [source-files]}
+  [^File file {:keys [known-source-files]}]
+  {:pre [known-source-files]}
   (some #(string/ends-with? (.getName file) %)
-        source-files))
+        known-source-files))
 
 (def ^:private classifiers
   {:external-deps [(constantly false) 0]
@@ -37,11 +37,11 @@
   (str relative-to "/WEB-INF/classes"))
 
 (defn- image-layer
-  [[layer-name files] {:keys [path-in-container]}]
-  {:pre [path-in-container]}
+  [[layer-name files] {:keys [app-root]}]
+  {:pre [app-root]}
   #:image.layer{:name layer-name
                 :source (map #(.getPath %) files)
-                :target (web-inf-classes path-in-container)})
+                :target (web-inf-classes app-root)})
 
 (defn- layer-comparator
   [this that]
