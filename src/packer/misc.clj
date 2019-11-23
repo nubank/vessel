@@ -1,6 +1,7 @@
 (ns packer.misc
   (:require [clojure.java.io :as io]
-            [clojure.string :as string])
+            [clojure.string :as string]
+            [clojure.data.json :as json])
   (:import clojure.lang.Sequential
            com.google.cloud.tools.jib.api.AbsoluteUnixPath
            java.io.File
@@ -43,6 +44,11 @@
   [^File dir]
   (.listFiles dir))
 
+(defn file-exists?
+  "Returns true if the file exists or false otherwise."
+  [^File file]
+  (.exists file))
+
 (defmacro with-clean-dir
   "binding => [binding-symbol binding-value]
   binding-value => java.io.File
@@ -53,7 +59,14 @@
   {:pre [(vector? binding) (= 2 (count binding))]}
   (let [[binding-symbol binding-value] binding]
     `(let [^File ~binding-symbol ~binding-value]
-       (when (.exists ~binding-symbol)
+       (when (file-exists? ~binding-symbol)
          (run! #(io/delete-file %) (reverse (file-seq ~binding-symbol))))
        (.mkdir ~binding-symbol)
        ~@body)))
+
+(defn read-json
+  "Reads a JSON object and parses it as Clojure data.
+
+  input can be any object supported by clojure.core/slurp."
+  [input]
+  (json/read-str (slurp input) :key-fn keyword))
