@@ -6,6 +6,13 @@
   (:import java.io.File
            [java.util.jar JarEntry JarFile]))
 
+(defn- get-project-insights
+  "List project sources and resources in order to obtain insights about
+  how image layers must be organized."
+  [^File project-root]
+  {:known-sources (misc/find-files-at (io/file project-root "src"))
+   :known-resources (misc/find-files-at (io/file project-root "resources"))})
+
 (defn- unpack-jar
   "Extracts all files from the jar in question into the destination
   directory.
@@ -28,16 +35,11 @@
 (defn containerize
   "Turns an input jar into a lightweight container according to the
   provided options."
-  [{:keys [app-root input manifest output]}]
-  {:pre [input manifest output]}
+  [{:keys [jar-file project-root] :as context}]
+  {:pre [jar-file project-root]}
   (with-clean-dir [dest-dir (io/file ".packer")]
-    (let [all-files (unpack-jar input dest-dir)
-          image-descriptor (image/describe-image manifest {:files all-files
-                                                           :known-source-files ["heimdall"
-                                                                                :app-root app-root
-                                                                                :output output]})]
-      (jib/containerize image-descriptor))))
-
-(comment (containerize {:image-name "heimdall"
-                        :input (io/file "/home/alangh/dev/nu/heimdall/target/heimdall-0.1.0-SNAPSHOT-standalone.jar")
-                        :output "heimdall.tar"}))
+    (let [files (unpack-jar jar-file dest-dir)]
+      (-> (into context (get-project-insights project-root))
+          (assoc :files files)
+          image/render-build-plan
+          jib/containerize))))
