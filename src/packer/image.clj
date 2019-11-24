@@ -1,22 +1,29 @@
 (ns packer.image
-  (:require [clojure.string :as string])
+  (:require [clojure.java.io :as io])
   (:import java.io.File))
 
-(defn- internal-dep?
-  [^File file _]
-  (and (.isDirectory file)
-       (re-find #"common_.*$" (.getName file))))
+(defn internal-dep?
+  "Is the file in question an internal dependency?"
+  [^File file {:keys [internal-deps-re]}]
+  (when internal-deps-re
+    (some #(re-find % (.getPath file))
+          internal-deps-re)))
+
+(defn- same-file-as-one-of?
+  [^File file files-to-compare]
+  (some #(= (.getName file)
+            (.getName %))
+        files-to-compare))
 
 (defn- resource?
-  [^File file _]
-  (and (.isFile file)
-       (not (string/ends-with? (.getName file) ".class"))))
+  [^File file {:keys [known-resources]}]
+  {:pre [known-resources]}
+  (same-file-as-one-of? file known-resources))
 
 (defn- source-file?
-  [^File file {:keys [known-source-files]}]
-  {:pre [known-source-files]}
-  (some #(string/ends-with? (.getName file) %)
-        known-source-files))
+  [^File file {:keys [known-sources]}]
+  {:pre [known-sources]}
+  (same-file-as-one-of? file known-sources))
 
 (def ^:private classifiers
   {:external-deps [(constantly false) 0]
@@ -33,11 +40,12 @@
       :external-deps))
 
 (defn- web-inf-classes
-  [relative-to]
-  (str relative-to "/WEB-INF/classes"))
+  ^String
+  [^File relative-to]
+  (.getPath (io/file relative-to "WEB-INF/classes")))
 
 (defn- image-layer
-  [[layer-name files] {:keys [app-root]}]
+  [[layer-name files] {:keys [^File app-root]}]
   {:pre [app-root]}
   #:image.layer{:name layer-name
                 :source (map #(.getPath %) files)
@@ -45,7 +53,7 @@
 
 (defn- layer-comparator
   [this that]
-  (let [sorting-score-of #(last (get classifiers %))]
+  (let [sorting-score-of #(last (get classifiers (:image.layer/name %)))]
     (compare (sorting-score-of this)
              (sorting-score-of that))))
 
@@ -65,9 +73,9 @@
           :repository name
           :tag version})
 
-(defn describe-image
-  [manifest options]
+(defn render-build-plan
+  [{:keys [manifest tarball] :as options}]
   #:image{:from (image-reference (manifest :base-image))
           :name (image-reference (manifest :image))
           :layers (create-image-layers options)
-          :tar-path (.getPath (options :output))})
+          :tarball (.getPath tarball)})
