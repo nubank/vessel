@@ -45,14 +45,15 @@
 
 (def ^:private help
   "Help option."
-  ["?" "--help"
+  ["-?" "--help"
    :id :help
    :desc "show this help and exit"])
 
 (defn- parse-args
-  [{:keys [cmd desc opts]} args]
+  [{:keys [cmd desc fn opts]} args]
   (-> (tools.cli/parse-opts args (conj opts help))
       (assoc :desc desc
+             :fn fn
              :usage (format "packer %s [OPTIONS]" cmd)
              :tip (format "See packer %s --help" cmd))))
 
