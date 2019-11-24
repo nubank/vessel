@@ -78,4 +78,4 @@
   #:image{:from (image-reference (manifest :base-image))
           :name (image-reference (manifest :image))
           :layers (create-image-layers options)
-          :tarball (.getPath tarball)})
+          :tar-path (.getPath tarball)})
