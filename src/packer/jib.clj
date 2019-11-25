@@ -3,8 +3,7 @@
   (:require [packer.misc :as misc])
   (:import [com.google.cloud.tools.jib.api Containerizer ImageReference Jib JibContainerBuilder LogEvent RegistryImage TarImage]
            com.google.cloud.tools.jib.event.events.ProgressEvent
-           com.google.cloud.tools.jib.frontend.CredentialRetrieverFactory
-           java.time.Instant))
+           com.google.cloud.tools.jib.frontend.CredentialRetrieverFactory))
 
 (def ^:private log-event-handler
   (misc/java-consumer
@@ -63,7 +62,7 @@
   ^JibContainerBuilder
   [from]
   (.. Jib (from (registry-image from))
-      (setCreationTime (Instant/now))))
+      (setCreationTime (misc/now))))
 
 (defn containerize
   [{:image/keys [from layers] :as options}]
