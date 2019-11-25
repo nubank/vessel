@@ -1,12 +1,14 @@
 (ns packer.misc
-  (:require [clojure.java.io :as io]
-            [clojure.string :as string]
-            [clojure.data.json :as json])
+  (:require [clojure.data.json :as json]
+            [clojure.java.io :as io]
+            [clojure.string :as string])
   (:import clojure.lang.Sequential
            com.google.cloud.tools.jib.api.AbsoluteUnixPath
            java.io.File
            [java.nio.file Path Paths]
-           java.util.ArrayList
+           java.text.DecimalFormat
+           [java.time Duration Instant]
+           [java.util ArrayList Locale]
            java.util.function.Consumer))
 
 (defn sequential->java-list ^ArrayList
@@ -30,6 +32,39 @@
   (reify Consumer
     (accept [_ arg]
       (f arg))))
+
+(defn now
+  "Return a java.time.Instant object representing the current instant."
+  []
+  (Instant/now))
+
+(defn duration-between
+  "Return a java.time.Duration object representing the duration between two temporal objects."
+  [start end]
+  (Duration/between start end))
+
+(def ^:private formatter
+  "Instance of java.text.Decimalformat used internally to format decimal
+  values."
+  (let [decimal-format (DecimalFormat/getInstance (Locale/ENGLISH))]
+    (.applyPattern decimal-format "#.##")
+    decimal-format))
+
+(defn- format-duration
+  [value time-unit]
+  (str (.format formatter value) " "
+       (if (= (float value) 1.0)
+         (name time-unit)
+         (str (name time-unit) "s"))))
+
+(defn duration->string
+  "Returns a friendly representation of the duration object in question."
+  [^Duration duration]
+  (let [millis (.toMillis duration)]
+    (cond
+      (<= millis 999)   (format-duration millis :millisecond)
+      (<= millis 59999) (format-duration (float (/ millis 1000)) :second)
+      :else             (format-duration (float (/ millis 60000)) :minute))))
 
 (defn log
   [level emitter message & args]
