@@ -66,6 +66,12 @@
       (<= millis 59999) (format-duration (float (/ millis 1000)) :second)
       :else             (format-duration (float (/ millis 60000)) :minute))))
 
+(defmacro with-stderr
+  "Binds *out* to *err* and evaluates body."
+  [& body]
+  `(binding [*out* *err*]
+     ~@body))
+
 (defn log
   [level emitter message & args]
   (printf "%s [%s] %s%n"

@@ -1,7 +1,8 @@
 (ns packer.misc-test
   (:require [clojure.test :refer :all]
             [packer.misc :as misc])
-  (:import [java.time Duration Instant]
+  (:import java.io.StringWriter
+           [java.time Duration Instant]
            java.util.function.Consumer))
 
 (deftest java-consumer-test
@@ -30,3 +31,11 @@
     (Duration/ofMinutes 1)         "1 minute"
     (Duration/ofMillis 63885)     "1.06 minutes"
     (Duration/ofMinutes 4)        "4 minutes"))
+
+(deftest with-stderr-test
+  (let [writer (StringWriter.)]
+    (binding [*err* writer]
+      (misc/with-stderr
+        (print "Error!"))
+      (is (= "Error!"
+             (str writer))))))
