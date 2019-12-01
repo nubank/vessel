@@ -1,53 +1,73 @@
 (ns packer.cli
-  (:gen-class)
+  "Functions for dealing with command line input and output."
   (:require [clojure.java.io :as io]
-            [packer.api :as api]
+            [clojure.string :as string]
             [clojure.tools.cli :as tools.cli]
-            [packer.misc :as misc]
-            [clojure.string :as string]))
-
-(def ^:private cwd (io/file "."))
-
-(def ^:private file-or-dir-must-exist
-  [misc/file-exists? "no such file or directory"])
-
-(def ^:private source-must-exist
-  [#(misc/file-exists? (:source %)) "no such file or directory"])
-
-(defn- accumulate
-  [m k v]
-  (update-in m [k] (fnil conj #{}) v))
-
-(defn- parse-extra-file
-  [value]
-  (let [source+target (string/split value #"\s*:\s*")]
-    (if (= 2 (count source+target))
-      (zipmap [:source :target] (map io/file source+target))
-      (throw (IllegalArgumentException.
-              "Invalid extra-file format. Please, specify extra
-    files in the form source:target")))))
-
-(defmacro with-stderr
-  "Binds *err* to *out* and evaluates body."
-  [& body]
-  `(binding [*out* *err*]
-     ~@body))
-
-(defn- run-command*
-  [{:keys [desc fn options summary usage]}]
-  (if-not (options :help)
-    (fn options)
-    (do (printf "Usage: %s%n%n" usage)
-        (println desc)
-        (println)
-        (println "Options:")
-        (println summary))))
+            [packer.misc :as misc :refer [with-stderr]]))
 
 (def ^:private help
   "Help option."
   ["-?" "--help"
    :id :help
-   :desc "show this help and exit"])
+   :desc "Show this help message and exit"])
+
+(defn- show-program-help?
+  "Shall Packer show the help message?"
+  [{:keys [arguments options]}]
+  (or (and (empty? options)
+           (empty? arguments))
+      (options :help)))
+
+(defn- show-help
+  "Prints the help message.
+
+  Return 0 indicating success."
+  [{:keys [commands desc summary usage]}]
+  (printf "Usage: %s%n%n" usage)
+  (println desc)
+  (println)
+  (println "Options:")
+  (println summary)
+  (when commands
+    (println)
+    (println "Commands:")
+    (run! println commands)
+    (println)
+    (println "See \"packer COMMAND --help\" for more information on a command"))
+  0)
+
+(defn show-errors
+  "Prints the error messages in the stderr.
+
+  Returns 1 indicating an error in the execution."
+  [{:keys [errors tip]}]
+  (with-stderr
+    (print "Packer: ")
+    (run! println errors)
+    (when tip
+      (printf "See \"%s\"%n" tip))
+    1))
+
+(defn- command-not-found
+  "Shows an error message saying that the command in question could not be found.
+
+  Returns 127 (the Linux error code for non-existing commands)."
+  [{:keys [cmd] :as result}]
+  (show-errors (assoc result :errors [(format "\"%s\" isn't a Packer command" cmd)]))
+  127)
+
+(defn- run-command*
+  "Calls the function assigned to the command in question.
+
+  If the options map contains the `:help` key, shows the command's
+  help message instead.
+
+  Returns 0 indicating success."
+  [{:keys [fn options] :as spec}]
+  (if-not (options :help)
+    (do (fn options)
+        0)
+    (show-help spec)))
 
 (defn- parse-args
   [{:keys [cmd desc fn opts]} args]
@@ -55,72 +75,66 @@
       (assoc :desc desc
              :fn fn
              :usage (format "packer %s [OPTIONS]" cmd)
-             :tip (format "See packer %s --help" cmd))))
+             :tip (format "packer %s --help" cmd))))
 
 (defn- run-command
   [command args]
-  (let [{:keys [error see] :as result} (parse-args command args)]
-    (if-not error
+  (let [{:keys [errors] :as result} (parse-args command args)]
+    (if-not errors
       (run-command* result)
-      (with-stderr
-        (println error)
-        (println see)))))
+      (show-errors result))))
 
-(defn run-program
-  [program [command & args]]
-  (if-let [command-spec (get program command)]
-    (run-command (assoc command-spec :cmd command) args)
-    (with-stderr
-      (printf "'%s' isn't a Packer command.%n" command)
-      (println "See packer --help"))))
+(defn- formatted-commands
+  "Given a program spec, returns a sequence of formatted commands to be
+  shown in the help message."
+  [program]
+  (let [lines (map #(vector (first %) (:desc (second %))) (:commands program))
+        lengths (map count (apply map (partial max-key count)  lines))]
+    (tools.cli/format-lines lengths lines)))
 
-(def packer
-  {"containerize"
-   {:desc "Turns an input jar into a lightweight
-  container according to provided options"
-    :fn api/containerize
-    :opts [["-a" "--app-root PATH"
-            :id :app-root
-            :desc "app root of the container image. Classes and
-                      resource files will be copied to relative paths to the app
-                      root."
-            :default (io/file "/app")
-            :parse-fn io/file]
-           ["-e" "--extra-file PATH"
-            :id :extra-files
-            :desc "extra files to be copied to the container
-                      image. The value must be passed in the form source:target
-                      and this option can be repeated many times"
-            :parse-fn parse-extra-file
-            :validate source-must-exist
-            :assoc-fn accumulate]
-           ["-i" "--input JAR"
-            :id :jar-file
-            :desc "jar file to be containerized"
-            :parse-fn io/file
-            :validate file-or-dir-must-exist]
-           ["-I" "--internal-deps REGEX"
-            :id :internal-deps-re
-            :desc "java regex to determine internal dependencies. Can be
-            repeated many times for a logical or"
-            :parse-fn re-pattern
-            :assoc-fn accumulate]
-           ["-m" "--manifest PATH"
-            :id :manifest
-            :desc "manifest file describing the image to be built"
-            :parse-fn io/file
-            :validate file-or-dir-must-exist
-            :assoc-fn #(assoc %1 %2 (misc/read-json %3))]
-           ["-p" "--project-root PATH"
-            :id :project-root
-            :desc "root dir of the project containing the source
-                      code. Packer inspects the project to obtain some useful
-                      insights about how to organize layers."
-            :default cwd
-            :parse-fn io/file
-            :validate file-or-dir-must-exist]
-           ["-o" "--output PATH"
-            :id :tarball
-            :desc "path to save the tarball containing the built image"
-            :default (io/file "image.tar")
-            :parse-fn io/file]]}})
+(defn- parse-input
+  [{:keys [desc] :as program} args]
+  (let [{:keys [arguments] :as result}
+        (tools.cli/parse-opts args
+                              [help]
+                              :in-order true)
+        [cmd & args] arguments]
+    (assoc result
+           :args args
+           :cmd cmd
+           :commands (formatted-commands program)
+           :desc desc
+           :tip "packer --help"
+           :usage (format "packer [OPTIONS] COMMAND"))))
+
+(defn run-packer
+  [program input]
+  (let [{:keys [errors cmd args] :as result} (parse-input program input)
+        spec (get-in program [:commands cmd])]
+    (cond
+      errors (show-errors result)
+      (show-program-help? result) (show-help result)
+      (nil? spec) (command-not-found result)
+      :else (run-command (assoc spec :cmd cmd) args))))
+
+(defn parse-extra-file
+  "Takes an extra file specification in the form `source:target` and
+  returns a map containing two keys: :source and :target (both
+  instances of java.io.File)."
+  [^String input]
+  (let [source+target (string/split input #"\s*:\s*")]
+    (if (= 2 (count source+target))
+      (zipmap [:source :target] (map io/file source+target))
+      (throw (IllegalArgumentException.
+              "Invalid extra-file format. Please, specify extra
+    files in the form source:target")))))
+
+(def file-or-dir-must-exist
+  [misc/file-exists? "no such file or directory"])
+
+(def source-must-exist
+  [#(misc/file-exists? (:source %)) "no such file or directory"])
+
+(defn repeat-option
+  [m k v]
+  (update-in m [k] (fnil conj #{}) v))
