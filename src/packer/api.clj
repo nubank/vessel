@@ -53,5 +53,5 @@
                   (unpack-jar jar-file dest-dir))]
       (-> (into context (get-project-insights project-root))
           (assoc :files files)
-          image/render-build-plan
+          image/render-containerization-plan
           jib/containerize))))
