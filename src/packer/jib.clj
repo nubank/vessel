@@ -48,21 +48,33 @@
 (defn- registry-image
   "Returns a new registry image."
   ^RegistryImage
-  [from]
-  (let [reference (image-reference from)
-        retriever (.. CredentialRetrieverFactory (forImage reference log-event-handler)
+  [^ImageReference image-reference]
+  (let [retriever (.. CredentialRetrieverFactory (forImage image-reference log-event-handler)
                       dockerConfig)]
-    (.. RegistryImage (named reference)
+    (.. RegistryImage (named image-reference)
         (addCredentialRetriever retriever))))
+
+(defn- is-in-docker-hub?
+  "Is the image in question stored in the official Docker hub?"
+  ^Boolean
+  [^ImageReference image-reference]
+  (= "registry-1.docker.io"
+     (.getRegistry image-reference)))
 
 (defn- container-builder
   "Returns a new container builder to start building the image.
 
-  from represents the descriptor of the base image."
+  from is a map representing the base image descriptor. The following
+  keys are meaningful: :image/registry, :image/repository
+  and :image/tag. The :image/registry and :image/tag are optional."
   ^JibContainerBuilder
   [from]
-  (.. Jib (from (registry-image from))
-      (setCreationTime (misc/now))))
+  (let [^ImageReference reference (image-reference from)]
+    (.. Jib (from
+             (if (is-in-docker-hub? reference)
+               (str reference)
+               (registry-image reference)))
+        (setCreationTime (misc/now)))))
 
 (defn containerize
   [{:image/keys [from layers] :as options}]
