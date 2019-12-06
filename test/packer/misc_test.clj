@@ -39,3 +39,9 @@
         (print "Error!"))
       (is (= "Error!"
              (str writer))))))
+(deftest sha-256-test
+  (is (= "d2cf1a50c1a07db39d8397d4815da14aa7c7230775bb3c94ea62c9855cf9488d"
+         (misc/sha-256 {:image
+                        {:name "my-app"
+                         :registry "docker.io"
+                         :version "v1"}}))))
