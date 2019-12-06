@@ -127,6 +127,15 @@ Options:
     (is (= 1
            (cli/run-packer packer ["greet" "-n"])))))
 
+(deftest parse-attribute-test
+  (testing "parses the input in the form `key:value`"
+    (is (= [:name "my-app"]
+           (cli/parse-attribute "name:my-app"))))
+
+  (testing "throws an exception when the input is malformed"
+    (is (thrown-with-msg? IllegalArgumentException #"^Invalid attribute format.*"
+                          (cli/parse-attribute "name")))))
+
 (deftest parse-extra-file-test
   (testing "parses the input in the form `source:target`"
     (is (= {:source (io/file "web.xml")

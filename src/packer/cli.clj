@@ -117,17 +117,30 @@
       (nil? spec) (command-not-found result)
       :else (run-command (assoc spec :cmd cmd) args))))
 
+(defn- split-at-colon
+  [^String input ^String message]
+  (let [parts (string/split input #"\s*:\s*")]
+    (if (= 2 (count parts))
+      parts
+      (throw (IllegalArgumentException. message)))))
+
+(defn parse-attribute
+  "Takes an attribute specification in the form key:value and returns a
+  tuple where the first element is the key (as a keyword) and the
+  second one is the value."
+  [^String input]
+  (let [key+value (split-at-colon input "Invalid attribute format. Please,
+  specify attributes in the form key:value")]
+    (update key+value 0 keyword)))
+
 (defn parse-extra-file
   "Takes an extra file specification in the form `source:target` and
   returns a map containing two keys: :source and :target (both
   instances of java.io.File)."
   [^String input]
-  (let [source+target (string/split input #"\s*:\s*")]
-    (if (= 2 (count source+target))
-      (zipmap [:source :target] (map io/file source+target))
-      (throw (IllegalArgumentException.
-              "Invalid extra-file format. Please, specify extra
-    files in the form source:target")))))
+  (let [source+target (split-at-colon input "Invalid extra-file format. Please, specify extra
+    files in the form source:target")]
+    (zipmap [:source :target] (map io/file source+target))))
 
 (def file-or-dir-must-exist
   [misc/file-exists? "no such file or directory"])
