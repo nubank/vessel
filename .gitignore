@@ -2,7 +2,7 @@
 .packer
 .cpcache
 .nrepl-port
-logs
+classes
 pom.xml
 scratch.clj
 target
