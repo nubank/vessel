@@ -60,7 +60,28 @@
              :id :tarball
              :desc "path to save the tarball containing the built image"
              :default (io/file "image.tar")
-             :parse-fn io/file]]}}})
+             :parse-fn io/file]]}
+
+    "manifest"
+    {:desc "FIXME"
+     :fn api/manifest
+     :opts
+     [["-a" "--attribute KEY-VALUE"
+       :id :attributes
+       :desc "Add the attribute in the form key:value to the manifest. This option can be repeated multiple times"
+       :default []
+       :parse-fn cli/parse-attribute
+       :assoc-fn cli/repeat-option]
+      ["-o" "--object OBJECT"
+       :id :object
+       :desc "Object under which attributes will be added"
+       :parse-fn keyword]
+      ["-p" "--project-root PATH"
+       :id :project-root
+       :desc "Root dir of the project"
+       :default cwd
+       :parse-fn io/file
+       :validate cli/file-or-dir-must-exist]]}}})
 
 (defn -main
   [& args]

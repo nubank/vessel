@@ -1,5 +1,7 @@
 (ns packer.api
-  (:require [clojure.java.io :as io]
+  (:require [clojure.data.json :as json]
+            [clojure.java.io :as io]
+            [packer.git :as git]
             [packer.image :as image]
             [packer.jib :as jib]
             [packer.misc :as misc :refer [with-clean-dir]])
@@ -55,3 +57,16 @@
           (assoc :files files)
           image/render-containerization-plan
           jib/containerize))))
+
+(defn- default-attrs
+  [^File working-dir]
+  {:branch (git/current-branch :working-dir working-dir)
+   :version (git/rev-parse-head :working-dir working-dir)})
+
+(defn manifest
+  [{:keys [attributes  object project-root]}]
+  {:pre [attributes  object project-root]}
+  (->> (into (default-attrs project-root) attributes)
+       (assoc {} object)
+       json/write-str
+       println))
