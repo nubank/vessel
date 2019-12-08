@@ -75,12 +75,12 @@
 
 (defn log
   [level emitter message & args]
-  (printf "%s [%s] %s%n"
-          (string/upper-case (if (keyword? level)
-                               (name level)
-                               (str level)))
-          emitter
-          (apply format message args)))
+  (println (format "%s [%s] %s"
+                   (string/upper-case (if (keyword? level)
+                                        (name level)
+                                        (str level)))
+                   emitter
+                   (apply format message args))))
 
 (defn find-files-at
   [^File dir]
