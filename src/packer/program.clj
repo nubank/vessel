@@ -9,6 +9,11 @@
   "Current working directory."
   (io/file "."))
 
+(defn- exit
+  "Terminates the JVM with the status code."
+  [status]
+  (System/exit status))
+
 (def packer
   {:desc "Containerization tool for Clojure applications"
    :commands
@@ -85,8 +90,4 @@
 
 (defn -main
   [& args]
-  (try
-    (cli/run-packer packer args)
-    (catch Exception e
-      (cli/show-errors {:errors [(.getMessage e)]})
-      1)))
+  (exit (cli/run packer args)))

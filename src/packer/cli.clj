@@ -36,7 +36,7 @@
     (println "See \"packer COMMAND --help\" for more information on a command"))
   0)
 
-(defn show-errors
+(defn- show-errors
   "Prints the error messages in the stderr.
 
   Returns 1 indicating an error in the execution."
@@ -88,7 +88,10 @@
   "Given a program spec, returns a sequence of formatted commands to be
   shown in the help message."
   [program]
-  (let [lines (map #(vector (first %) (:desc (second %))) (:commands program))
+  (let [lines (->> program
+                   :commands
+                   (map #(vector (first %) (:desc (second %))))
+                   (sort-by first))
         lengths (map count (apply map (partial max-key count)  lines))]
     (tools.cli/format-lines lengths lines)))
 
@@ -107,7 +110,7 @@
            :tip "packer --help"
            :usage (format "packer [OPTIONS] COMMAND"))))
 
-(defn run-packer
+(defn- run*
   [program input]
   (let [{:keys [errors cmd args] :as result} (parse-input program input)
         spec (get-in program [:commands cmd])]
@@ -116,6 +119,13 @@
       (show-program-help? result) (show-help result)
       (nil? spec) (command-not-found result)
       :else (run-command (assoc spec :cmd cmd) args))))
+
+(defn run
+  [program args]
+  (try
+    (run* program args)
+    (catch Exception e
+      (show-errors {:errors [(.getMessage e)]}))))
 
 (defn- split-at-colon
   [^String input ^String message]

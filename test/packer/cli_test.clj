@@ -11,22 +11,6 @@
        ~@body
        (str writer#))))
 
-(deftest show-errors-test
-  (testing "prints the error message along with an optional tip in the stderr"
-
-    (is (= "Packer: Error\n"
-           (with-err-str
-             (cli/show-errors {:errors ["Error"]}))))
-
-    (is (= "Packer: Error\nSee \"anything\"\n"
-           (with-err-str
-             (cli/show-errors {:errors ["Error"]
-                               :tip "anything"})))))
-
-  (testing "returns 1 indicating a failure"
-    (is (= 1
-           (cli/show-errors {:errors ["Error"]})))))
-
 (defn greet
   [{:keys [names]}]
   (println "Hello"
@@ -53,31 +37,34 @@
      :opts [["-n" "--name NAME"
              :id :names
              :desc "Name of the person to say goodbye to"
-             :assoc-fn cli/repeat-option]]}}})
+             :assoc-fn cli/repeat-option]]}
+    "boom"
+    {:desc "Simply blows up"
+     :fn (fn [_] (throw (Exception. "Boom!")))}}})
 
-(deftest run-packer-test
+(deftest run-test
   (testing "calls the function assigned to the command in question"
     (is (= "Hello John Doe\n"
-           (with-out-str (cli/run-packer packer ["greet"
-                                                 "-n" "John Doe"])))))
+           (with-out-str (cli/run packer ["greet"
+                                          "-n" "John Doe"])))))
 
   (testing "the function `repeat-option`, when assigned to the `:assoc-fn`
   option, allows the flag to be repeated multiple times"
     (is (= "Hello John Doe, Jane Doe\n"
-           (with-out-str (cli/run-packer packer ["greet"
-                                                 "-n" "John Doe"
-                                                 "-n" "Jane Doe"])))))
+           (with-out-str (cli/run packer ["greet"
+                                          "-n" "John Doe"
+                                          "-n" "Jane Doe"])))))
 
   (testing "returns 0 indicating success"
     (is (= 0
-           (cli/run-packer packer ["greet"
-                                   "-n" "John Doe"]))))
+           (cli/run packer ["greet"
+                            "-n" "John Doe"]))))
 
   (testing "shows the help message when one calls Packer with no arguments or with
 the help flag"
-    (are [args] (= "Usage: packer [OPTIONS] COMMAND\n\nFIXME\n\nOptions:\n  -?, --help  Show this help message and exit\n\nCommands:\n  greet    Say a hello message for someone\n  goodbye  Print a goodbye message\n\nSee \"packer COMMAND --help\" for more information on a command\n"
+    (are [args] (= "Usage: packer [OPTIONS] COMMAND\n\nFIXME\n\nOptions:\n  -?, --help  Show this help message and exit\n\nCommands:\n  boom     Simply blows up\n  goodbye  Print a goodbye message\n  greet    Say a hello message for someone\n\nSee \"packer COMMAND --help\" for more information on a command\n"
                    (with-out-str
-                     (cli/run-packer packer args)))
+                     (cli/run packer args)))
       []
       ["-?"]
       ["--help"]))
@@ -91,41 +78,50 @@ Options:
   -n, --name NAME  Name of the person to greet
   -?, --help       Show this help message and exit\n"
            (with-out-str
-             (cli/run-packer packer ["greet" "--help"])))))
+             (cli/run packer ["greet" "--help"])))))
 
   (testing "returns 0 after showing the help message"
     (is (= 0
-           (cli/run-packer packer ["--help"])))
+           (cli/run packer ["--help"])))
     (is (= 0
-           (cli/run-packer packer ["goodbye" "--help"]))))
+           (cli/run packer ["goodbye" "--help"]))))
 
   (testing "shows a meaningful message when Packer is called with wrong options"
     (is (= "Packer: Unknown option: \"--foo\"\nSee \"packer --help\"\n"
            (with-err-str
-             (cli/run-packer packer ["--foo"])))))
+             (cli/run packer ["--foo"])))))
 
   (testing "returns 1 indicating the error"
     (is (= 1
-           (cli/run-packer packer ["--foo"]))))
+           (cli/run packer ["--foo"]))))
 
   (testing "shows a meaningful message when the command in question doesn't
   exist"
     (is (= "Packer: \"build\" isn't a Packer command\nSee \"packer --help\"\n"
            (with-err-str
-             (cli/run-packer packer ["build" "--help"])))))
+             (cli/run packer ["build" "--help"])))))
 
   (testing "returns 127 indicating that the command could not be found"
     (is (= 127
-           (cli/run-packer packer ["build" "--help"]))))
+           (cli/run packer ["build" "--help"]))))
 
   (testing "shows a meaningful message when a command is mistakenly called"
     (is (= "Packer: Missing required argument for \"-n NAME\"\nSee \"packer greet --help\"\n"
            (with-err-str
-             (cli/run-packer packer ["greet" "-n"])))))
+             (cli/run packer ["greet" "-n"])))))
 
   (testing "returns 1 indicating an error"
     (is (= 1
-           (cli/run-packer packer ["greet" "-n"])))))
+           (cli/run packer ["greet" "-n"]))))
+
+  (testing "shows an error message when the command throws an exception"
+    (is (= "Packer: Boom!\n"
+           (with-err-str
+             (cli/run packer ["boom"])))))
+
+  (testing "returns 1 indicating an error"
+    (is (= 1
+           (cli/run packer ["boom"])))))
 
 (deftest parse-attribute-test
   (testing "parses the input in the form `key:value`"
