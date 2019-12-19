@@ -1,7 +1,6 @@
 (ns packer.api
   (:require [clojure.data.json :as json]
             [clojure.java.io :as io]
-            [packer.git :as git]
             [packer.image :as image]
             [packer.jib :as jib]
             [packer.misc :as misc :refer [with-clean-dir]])
@@ -15,7 +14,7 @@
   [& body]
   `(let [start#  (misc/now)
          result# (do ~@body)]
-     (misc/log :info "packer" "done in %s"
+     (misc/log :info "packer" "Successfully containerized in %s"
                (misc/duration->string (misc/duration-between start# (misc/now))))
      result#))
 
@@ -58,15 +57,12 @@
           image/render-containerization-plan
           jib/containerize))))
 
-(defn- default-attrs
-  [^File working-dir]
-  {:branch (git/current-branch :working-dir working-dir)
-   :version (git/rev-parse-head :working-dir working-dir)})
-
 (defn manifest
-  [{:keys [attributes  object project-root]}]
-  {:pre [attributes  object project-root]}
-  (->> (into (default-attrs project-root) attributes)
-       (assoc {} object)
-       json/write-str
-       println))
+  [{:keys [attributes  object output]}]
+  {:pre [attributes  object output]}
+  (let [write-manifest #(binding [*out* output]
+                          (println %))]
+    (->> (into {} attributes)
+         (assoc {} object)
+         json/write-str
+         write-manifest)))
