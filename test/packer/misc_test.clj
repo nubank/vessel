@@ -1,9 +1,27 @@
 (ns packer.misc-test
   (:require [clojure.test :refer :all]
+            [clojure.test.check.clojure-test :refer [defspec]]
+            [clojure.test.check.generators :as gen]
+            [clojure.test.check.properties :as prop]
             [packer.misc :as misc])
   (:import java.io.StringWriter
            [java.time Duration Instant]
            java.util.function.Consumer))
+
+(def kv-gen (gen/tuple gen/keyword (gen/such-that (complement nil?) gen/any)))
+
+(defspec assoc-some-spec-test
+  {:num-tests 25}
+  (prop/for-all [kvs (gen/fmap (partial mapcat identity)
+                               (gen/not-empty (gen/vector kv-gen)))]
+                (testing "assoc-some behaves like assoc for non-nil values"
+                  (is (= (apply assoc {} kvs)
+                         (apply  misc/assoc-some {} kvs))))))
+
+(deftest assoc-some-test
+  (is (= {:a 1}
+         (misc/assoc-some {}
+                          :a 1 :b nil))))
 
 (deftest java-consumer-test
   (is (instance? Consumer

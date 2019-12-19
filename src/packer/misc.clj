@@ -12,6 +12,17 @@
            [java.util ArrayList Locale]
            java.util.function.Consumer))
 
+(defn assoc-some
+  "Assoc's key and value into the associative data structure only when
+  the value isn't nil."
+  [m & kvs]
+  {:pre [(even? (count kvs))]}
+  (reduce (fn [result [key val]]
+            (if-not (nil? val)
+              (assoc result key val)
+              result))
+          m (partition 2 kvs)))
+
 (defn sequential->java-list ^ArrayList
   [^Sequential seq]
   (ArrayList. seq))
