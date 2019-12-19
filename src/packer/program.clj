@@ -77,16 +77,16 @@
        :default []
        :parse-fn cli/parse-attribute
        :assoc-fn cli/repeat-option]
-      ["-o" "--object OBJECT"
+      ["-o" "--output PATH"
+       :id :output
+       :desc "Write the manifest to path instead of stdout"
+       :default *out*
+       :default-desc "stdout"
+       :parse-fn (comp io/writer io/file)]
+      ["-O" "--object OBJECT"
        :id :object
        :desc "Object under which attributes will be added"
-       :parse-fn keyword]
-      ["-p" "--project-root PATH"
-       :id :project-root
-       :desc "Root dir of the project"
-       :default cwd
-       :parse-fn io/file
-       :validate cli/file-or-dir-must-exist]]}}})
+       :parse-fn keyword]]}}})
 
 (defn -main
   [& args]
