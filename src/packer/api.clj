@@ -4,7 +4,7 @@
             [packer.image :as image]
             [packer.jib :as jib]
             [packer.misc :as misc :refer [with-clean-dir]])
-  (:import java.io.File
+  (:import [java.io File Writer]
            [java.util.jar JarEntry JarFile]))
 
 (defmacro ^:private with-elapsed-time
@@ -57,12 +57,25 @@
           image/render-containerization-plan
           jib/containerize))))
 
+(defn- write-manifest
+  "Writes the manifest to the output as a JSON object."
+  [^Writer output manifest]
+  (binding [*out* output]
+    (println (json/write-str manifest))))
+
 (defn manifest
   [{:keys [attributes  object output]}]
   {:pre [attributes  object output]}
-  (let [write-manifest #(binding [*out* output]
-                          (println %))]
-    (->> (into {} attributes)
-         (assoc {} object)
-         json/write-str
-         write-manifest)))
+  (->> (into {}  attributes)
+       (assoc {} object)
+       (write-manifest output)))
+
+(defn image
+  [{:keys [attributes base-image manifests output registry repository]}]
+  {:pre [output registry repository]}
+  (let [merge-all (partial apply merge)
+        image-manifest (-> {:image (into {:repository repository :registry registry} attributes)}
+                           (misc/assoc-some :base-image base-image)
+                           (merge-all manifests))
+        tag (misc/sha-256 image-manifest)]
+    (write-manifest output (assoc-in image-manifest [:image :tag] tag))))
