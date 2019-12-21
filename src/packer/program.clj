@@ -106,7 +106,7 @@
        :desc "Image tag. When omitted uses a SHA-256 digest of the resulting manifest"]]}
 
     "manifest"
-    {:desc "FIXME"
+    {:desc "Generate arbitrary manifests"
      :fn api/manifest
      :opts
      [["-a" "--attribute KEY-VALUE"
