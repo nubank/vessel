@@ -71,11 +71,11 @@
        (write-manifest output)))
 
 (defn image
-  [{:keys [attributes base-image manifests output registry repository]}]
+  [{:keys [attributes base-image manifests output registry repository tag]}]
   {:pre [output registry repository]}
   (let [merge-all (partial apply merge)
         image-manifest (-> {:image (into {:repository repository :registry registry} attributes)}
                            (misc/assoc-some :base-image base-image)
                            (merge-all manifests))
-        tag (misc/sha-256 image-manifest)]
-    (write-manifest output (assoc-in image-manifest [:image :tag] tag))))
+        image-tag (or tag (misc/sha-256 image-manifest))]
+    (write-manifest output (assoc-in image-manifest [:image :tag] image-tag))))

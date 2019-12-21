@@ -31,36 +31,36 @@
                                 :output (io/writer (io/file "target/my-app.json"))})
                  (slurp my-app-manifest)))))))
 
+(defn- gen-image-manifest
+  [options]
+  (api/image (assoc options :output (io/writer my-app-manifest)))
+  (misc/read-json my-app-manifest))
+
 (deftest image-test
   (let [base-image {:image
                     {:registry "docker.io"
                      :repository "openjdk"
                      :tag "alpine"}}
-        data {:registry "my-registry.com"
-              :repository "my-app"}]
-    (testing "generates an image manifest"
+        options {:registry "my-registry.com"
+                 :repository "my-app"}]
+    (testing "generates an image manifest according to the provided options"
       (is (= {:image {:registry "my-registry.com"
                       :repository "my-app"
                       :tag "9965bb9aad0efdaf499a35368f338ea053689e8d44cadb748991a84fd1eb355d"}}
-             (do (api/image (assoc data               :output (io/writer my-app-manifest)))
-                 (misc/read-json my-app-manifest))))
+             (gen-image-manifest options)))
 
       (is (match? {:base-image base-image
                    :image {:registry "my-registry.com"
                            :repository "my-app"
                            :tag string?}}
-                  (do (api/image (assoc data :base-image base-image
-                                        :output (io/writer my-app-manifest)))
-                      (misc/read-json my-app-manifest)))
+                  (gen-image-manifest (assoc options :base-image base-image)))
           "assoc's the base image's manifest")
 
       (is (match? {:image {:registry "my-registry.com"
                            :repository "my-app"
                            :tag string?
                            :git-commit "4c52b901c6"}}
-                  (do (api/image (assoc data :attributes #{[:git-commit "4c52b901c6"]}
-                                        :output (io/writer my-app-manifest)))
-                      (misc/read-json my-app-manifest)))
+                  (gen-image-manifest (assoc options :attributes #{[:git-commit "4c52b901c6"]})))
           "assoc's arbitrary attributes into the resulting manifest")
 
       (is (match? {:image {:registry "my-registry.com"
@@ -68,8 +68,10 @@
                            :tag string?}
                    :service {:name "my-service"
                              :type "clojure"}}
-                  (do (api/image (assoc data :manifests #{{:service {:name "my-service"
-                                                                     :type "clojure"}}}
-                                        :output (io/writer my-app-manifest)))
-                      (misc/read-json my-app-manifest)))
-          "merges arbitrary manifests"))))
+                  (gen-image-manifest (assoc options :manifests #{{:service {:name "my-service"
+                                                                             :type "clojure"}}})))
+          "merges arbitrary manifests into the generated one")
+
+      (is (match? {:image {:tag "v1"}}
+                  (gen-image-manifest (assoc options :tag "v1")))
+          "overrides the auto-generated tag when one is provided"))))

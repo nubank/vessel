@@ -100,7 +100,10 @@
        :default "docker.io"]
       ["-R" "--repository REPOSITORY"
        :id :repository
-       :desc "Image repository"]]}
+       :desc "Image repository"]
+      ["-t" "--tag TAG"
+       :id :tag
+       :desc "Image tag. When omitted uses a SHA-256 digest of the resulting manifest"]]}
 
     "manifest"
     {:desc "FIXME"
