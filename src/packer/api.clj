@@ -1,9 +1,10 @@
 (ns packer.api
-  (:require [clojure.java.io :as io]
+  (:require [clojure.data.json :as json]
+            [clojure.java.io :as io]
             [packer.image :as image]
             [packer.jib :as jib]
             [packer.misc :as misc :refer [with-clean-dir]])
-  (:import java.io.File
+  (:import [java.io File Writer]
            [java.util.jar JarEntry JarFile]))
 
 (defmacro ^:private with-elapsed-time
@@ -13,7 +14,7 @@
   [& body]
   `(let [start#  (misc/now)
          result# (do ~@body)]
-     (misc/log :info "packer" "done in %s"
+     (misc/log :info "packer" "Successfully containerized in %s"
                (misc/duration->string (misc/duration-between start# (misc/now))))
      result#))
 
@@ -55,3 +56,26 @@
           (assoc :files files)
           image/render-containerization-plan
           jib/containerize))))
+
+(defn- write-manifest
+  "Writes the manifest to the output as a JSON object."
+  [^Writer output manifest]
+  (binding [*out* output]
+    (println (json/write-str manifest))))
+
+(defn manifest
+  [{:keys [attributes  object output]}]
+  {:pre [attributes  object output]}
+  (->> (into {}  attributes)
+       (assoc {} object)
+       (write-manifest output)))
+
+(defn image
+  [{:keys [attributes base-image manifests output registry repository tag]}]
+  {:pre [output registry repository]}
+  (let [merge-all (partial apply merge)
+        image-manifest (-> {:image (into {:repository repository :registry registry} attributes)}
+                           (misc/assoc-some :base-image base-image)
+                           (merge-all manifests))
+        image-tag (or tag (misc/sha-256 image-manifest))]
+    (write-manifest output (assoc-in image-manifest [:image :tag] image-tag))))

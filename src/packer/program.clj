@@ -9,6 +9,11 @@
   "Current working directory."
   (io/file "."))
 
+(defn- exit
+  "Terminates the JVM with the status code."
+  [status]
+  (System/exit status))
+
 (def packer
   {:desc "Containerization tool for Clojure applications"
    :commands
@@ -39,7 +44,7 @@
             ["-I" "--internal-deps REGEX"
              :id :internal-deps-re
              :desc "java regex to determine internal dependencies. Can be
-            repeated many times for a logical or"
+            repeated many times for a logical or effect"
              :parse-fn re-pattern
              :assoc-fn cli/repeat-option]
             ["-m" "--manifest PATH"
@@ -60,12 +65,67 @@
              :id :tarball
              :desc "path to save the tarball containing the built image"
              :default (io/file "image.tar")
-             :parse-fn io/file]]}}})
+             :parse-fn io/file]]}
+
+    "image"
+    {:desc "Generate an image manifest, optionally by extending a base image and/or merging other manifests"
+     :fn api/image
+     :opts
+     [["-a" "--attribute KEY-VALUE"
+       :id :attributes
+       :desc "Add the attribute in the form key:value to the manifest. This option can be repeated multiple times"
+       :parse-fn cli/parse-attribute
+       :assoc-fn cli/repeat-option]
+      ["-b" "--base-image PATH"
+       :id :base-image
+       :desc "Manifest file describing the base image"
+       :parse-fn io/file
+       :validate cli/file-or-dir-must-exist
+       :assoc-fn #(assoc %1 %2 (misc/read-json %3))]
+      ["-m" "--merge-into PATH"
+       :id :manifests
+       :desc "Manifest file to be merged into the manifest being created. This option can be repeated multiple times"
+       :parse-fn io/file
+       :validate cli/file-or-dir-must-exist
+       :assoc-fn #(cli/repeat-option %1 %2 (misc/read-json %3))]
+      ["-o" "--output PATH"
+       :id :output
+       :desc "Write the manifest to path instead of stdout"
+       :default *out*
+       :default-desc "stdout"
+       :parse-fn (comp io/writer io/file)]
+      ["-r" "--registry REGISTRY"
+       :id :registry
+       :desc "Image registry"
+       :default "docker.io"]
+      ["-R" "--repository REPOSITORY"
+       :id :repository
+       :desc "Image repository"]
+      ["-t" "--tag TAG"
+       :id :tag
+       :desc "Image tag. When omitted uses a SHA-256 digest of the resulting manifest"]]}
+
+    "manifest"
+    {:desc "Generate arbitrary manifests"
+     :fn api/manifest
+     :opts
+     [["-a" "--attribute KEY-VALUE"
+       :id :attributes
+       :desc "Add the attribute in the form key:value to the manifest. This option can be repeated multiple times"
+       :default []
+       :parse-fn cli/parse-attribute
+       :assoc-fn cli/repeat-option]
+      ["-o" "--output PATH"
+       :id :output
+       :desc "Write the manifest to path instead of stdout"
+       :default *out*
+       :default-desc "stdout"
+       :parse-fn (comp io/writer io/file)]
+      ["-O" "--object OBJECT"
+       :id :object
+       :desc "Object under which attributes will be added"
+       :parse-fn keyword]]}}})
 
 (defn -main
   [& args]
-  (try
-    (cli/run-packer packer args)
-    (catch Exception e
-      (cli/show-errors {:errors [(.getMessage e)]})
-      1)))
+  (exit (cli/run packer args)))

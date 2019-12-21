@@ -36,7 +36,7 @@
     (println "See \"packer COMMAND --help\" for more information on a command"))
   0)
 
-(defn show-errors
+(defn- show-errors
   "Prints the error messages in the stderr.
 
   Returns 1 indicating an error in the execution."
@@ -88,7 +88,10 @@
   "Given a program spec, returns a sequence of formatted commands to be
   shown in the help message."
   [program]
-  (let [lines (map #(vector (first %) (:desc (second %))) (:commands program))
+  (let [lines (->> program
+                   :commands
+                   (map #(vector (first %) (:desc (second %))))
+                   (sort-by first))
         lengths (map count (apply map (partial max-key count)  lines))]
     (tools.cli/format-lines lengths lines)))
 
@@ -107,7 +110,7 @@
            :tip "packer --help"
            :usage (format "packer [OPTIONS] COMMAND"))))
 
-(defn run-packer
+(defn- run*
   [program input]
   (let [{:keys [errors cmd args] :as result} (parse-input program input)
         spec (get-in program [:commands cmd])]
@@ -117,17 +120,37 @@
       (nil? spec) (command-not-found result)
       :else (run-command (assoc spec :cmd cmd) args))))
 
+(defn run
+  [program args]
+  (try
+    (run* program args)
+    (catch Exception e
+      (show-errors {:errors [(.getMessage e)]}))))
+
+(defn- split-at-colon
+  [^String input ^String message]
+  (let [parts (string/split input #"\s*:\s*")]
+    (if (= 2 (count parts))
+      parts
+      (throw (IllegalArgumentException. message)))))
+
+(defn parse-attribute
+  "Takes an attribute specification in the form key:value and returns a
+  tuple where the first element is the key (as a keyword) and the
+  second one is the value."
+  [^String input]
+  (let [key+value (split-at-colon input "Invalid attribute format. Please,
+  specify attributes in the form key:value")]
+    (update key+value 0 keyword)))
+
 (defn parse-extra-file
   "Takes an extra file specification in the form `source:target` and
   returns a map containing two keys: :source and :target (both
   instances of java.io.File)."
   [^String input]
-  (let [source+target (string/split input #"\s*:\s*")]
-    (if (= 2 (count source+target))
-      (zipmap [:source :target] (map io/file source+target))
-      (throw (IllegalArgumentException.
-              "Invalid extra-file format. Please, specify extra
-    files in the form source:target")))))
+  (let [source+target (split-at-colon input "Invalid extra-file format. Please, specify extra
+    files in the form source:target")]
+    (zipmap [:source :target] (map io/file source+target))))
 
 (def file-or-dir-must-exist
   [misc/file-exists? "no such file or directory"])

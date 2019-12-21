@@ -6,10 +6,22 @@
            com.google.cloud.tools.jib.api.AbsoluteUnixPath
            java.io.File
            [java.nio.file Path Paths]
+           java.security.MessageDigest
            java.text.DecimalFormat
            [java.time Duration Instant]
            [java.util ArrayList Locale]
            java.util.function.Consumer))
+
+(defn assoc-some
+  "Assoc's key and value into the associative data structure only when
+  the value isn't nil."
+  [m & kvs]
+  {:pre [(even? (count kvs))]}
+  (reduce (fn [result [key val]]
+            (if-not (nil? val)
+              (assoc result key val)
+              result))
+          m (partition 2 kvs)))
 
 (defn sequential->java-list ^ArrayList
   [^Sequential seq]
@@ -74,12 +86,12 @@
 
 (defn log
   [level emitter message & args]
-  (printf "%s [%s] %s%n"
-          (string/upper-case (if (keyword? level)
-                               (name level)
-                               (str level)))
-          emitter
-          (apply format message args)))
+  (println (format "%s [%s] %s"
+                   (string/upper-case (if (keyword? level)
+                                        (name level)
+                                        (str level)))
+                   emitter
+                   (apply format message args))))
 
 (defn find-files-at
   [^File dir]
@@ -111,3 +123,21 @@
   input can be any object supported by clojure.core/slurp."
   [input]
   (json/read-str (slurp input) :key-fn keyword))
+
+(defn- hex
+  "Returns the hexadecimal representation of the provided array of
+  bytes."
+  ^String
+  [bytes]
+  (let [builder (StringBuilder.)]
+    (run! #(.append builder (format "%02x" %)) bytes)
+    (str builder)))
+
+(defn sha-256
+  "Returns the SHA-256 digest for the Clojure object in question."
+  ^String
+  [data]
+  (let [message-digest (MessageDigest/getInstance "SHA-256")
+        input (.getBytes (pr-str data) "UTF-8")]
+    (.update message-digest input)
+    (hex (.digest message-digest))))
