@@ -27,7 +27,7 @@
                               #:image{:repository "my-app" :tag "v1"}
                               :layers
                               [#:image.layer{:name :resources
-                                             :source ["test/resources/fixtures/greeting.txt"]
+                                             :source ["test/resources/greeting/greeting.txt"]
                                              :target "/opt/app/WEB-INF/classes"}]
                               :tar-path tar-path})
 
