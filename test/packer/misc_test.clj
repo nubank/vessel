@@ -1,5 +1,6 @@
 (ns packer.misc-test
-  (:require [clojure.test :refer :all]
+  (:require [clojure.java.io :as io]
+            [clojure.test :refer :all]
             [clojure.test.check.clojure-test :refer [defspec]]
             [clojure.test.check.generators :as gen]
             [clojure.test.check.properties :as prop]
@@ -57,6 +58,13 @@
         (print "Error!"))
       (is (= "Error!"
              (str writer))))))
+
+(def cwd (io/file (.getCanonicalPath (io/file "."))))
+
+(deftest relativize-test
+  (is (= (io/file "deps.edn")
+         (misc/relativize (io/file cwd "deps.edn") cwd))))
+
 (deftest sha-256-test
   (is (= "d2cf1a50c1a07db39d8397d4815da14aa7c7230775bb3c94ea62c9855cf9488d"
          (misc/sha-256 {:image

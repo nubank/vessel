@@ -117,6 +117,14 @@
        (.mkdir ~binding-symbol)
        ~@body)))
 
+(defn relativize
+  "Given a file and a base directory, returns a new file representing
+  the relative path of the provided file in relation to the base
+  directory."
+  ^File
+  [^File file ^File base]
+  (.. base toPath (relativize (.toPath file)) toFile))
+
 (defn read-json
   "Reads a JSON object and parses it as Clojure data.
 
