@@ -3,17 +3,21 @@
             [clojure.test :refer :all]
             [matcher-combinators.test :refer [match?]]
             [packer.jib :as jib]
-            [packer.misc :as misc])
+            [packer.misc :as misc]
+            [packer.test-helpers :refer [ensure-clean-test-dir]])
   (:import org.apache.commons.vfs2.VFS))
 
+(def tar-path "target/tests/jib-test/my-app.tar")
 (defn read-from-tarball
   [^String file-name]
   (let [cwd (str (.getCanonicalFile (io/file ".")))
-        tar-file (format "tar:%s/target/my-app.tar!/%s" cwd file-name)]
+        tar-file (format "tar:%s/%s!/%s" cwd tar-path file-name)]
     (.. VFS getManager
         (resolveFile tar-file)
         getContent
         getInputStream)))
+
+(use-fixtures :once (ensure-clean-test-dir))
 
 (deftest ^:integration containerize-test
   (testing "calls Google Jib and containerize the files in question"
@@ -25,9 +29,9 @@
                               [#:image.layer{:name :resources
                                              :source ["test/resources/fixtures/greeting.txt"]
                                              :target "/opt/app/WEB-INF/classes"}]
-                              :tar-path "target/my-app.tar"})
+                              :tar-path tar-path})
 
-    (is (true? (misc/file-exists? (io/file "target/my-app.tar")))))
+    (is (true? (misc/file-exists? (io/file tar-path)))))
 
   (is (match? [{:config "config.json"
                 :repoTags ["my-app:v1"]
