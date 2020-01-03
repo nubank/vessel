@@ -78,6 +78,8 @@
       (<= millis 59999) (format-duration (float (/ millis 1000)) :second)
       :else             (format-duration (float (/ millis 60000)) :minute))))
 
+;; I/O functions.
+
 (defmacro with-stderr
   "Binds *out* to *err* and evaluates body."
   [& body]
@@ -101,6 +103,18 @@
   "Returns true if the file exists or false otherwise."
   [^File file]
   (.exists file))
+
+(defn ^File make-dir
+  "Creates the directory in question and all of its parents.
+
+  The arguments are the same taken by clojure.java.io/file. Returns
+  the created directory."
+  [f & others]
+  {:pos [(.isDirectory %)]}
+  (let [dir (apply io/file f others)]
+    (io/make-parents dir)
+    (.mkdir dir)
+    dir))
 
 (defmacro with-clean-dir
   "binding => [binding-symbol binding-value]

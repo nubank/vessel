@@ -4,10 +4,13 @@
             [clojure.test.check.clojure-test :refer [defspec]]
             [clojure.test.check.generators :as gen]
             [clojure.test.check.properties :as prop]
-            [packer.misc :as misc])
-  (:import java.io.StringWriter
+            [packer.misc :as misc]
+            [packer.test-helpers :refer [ensure-clean-test-dir]])
+  (:import [java.io File StringWriter]
            [java.time Duration Instant]
            java.util.function.Consumer))
+
+(use-fixtures :once (ensure-clean-test-dir))
 
 (def kv-gen (gen/tuple gen/keyword (gen/such-that (complement nil?) gen/any)))
 
@@ -59,11 +62,15 @@
       (is (= "Error!"
              (str writer))))))
 
-(def cwd (io/file (.getCanonicalPath (io/file "."))))
+(deftest make-dir-test
+  (let [dir (misc/make-dir (io/file "target") "tests" "misc-test" "dir1" "dir2")]
+    (is (instance? File dir))
+    (is (true? (misc/file-exists? dir)))))
 
 (deftest relativize-test
-  (is (= (io/file "deps.edn")
-         (misc/relativize (io/file cwd "deps.edn") cwd))))
+  (let [cwd (io/file (.getCanonicalPath (io/file ".")))]
+    (is (= (io/file "deps.edn")
+           (misc/relativize (io/file cwd "deps.edn") cwd)))))
 
 (deftest sha-256-test
   (is (= "d2cf1a50c1a07db39d8397d4815da14aa7c7230775bb3c94ea62c9855cf9488d"
