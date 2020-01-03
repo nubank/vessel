@@ -6,7 +6,7 @@
             [clojure.test.check.properties :as prop]
             [packer.misc :as misc]
             [packer.test-helpers :refer [ensure-clean-test-dir]])
-  (:import [java.io File StringWriter]
+  (:import [java.io File StringReader StringWriter]
            [java.time Duration Instant]
            java.util.function.Consumer))
 
@@ -62,15 +62,28 @@
       (is (= "Error!"
              (str writer))))))
 
+(def cwd (io/file (.getCanonicalPath (io/file "."))))
+
+(deftest filter-files-test
+  (is (every? #(.isFile %)
+              (misc/filter-files (file-seq cwd)))))
+
 (deftest make-dir-test
   (let [dir (misc/make-dir (io/file "target") "tests" "misc-test" "dir1" "dir2")]
     (is (instance? File dir))
     (is (true? (misc/file-exists? dir)))))
 
 (deftest relativize-test
-  (let [cwd (io/file (.getCanonicalPath (io/file ".")))]
-    (is (= (io/file "deps.edn")
-           (misc/relativize (io/file cwd "deps.edn") cwd)))))
+  (is (= (io/file "deps.edn")
+         (misc/relativize (io/file cwd "deps.edn") cwd))))
+
+(deftest read-edn-test
+  (is (= {:greeting "Hello!"}
+         (misc/read-edn (StringReader. "{:greeting \"Hello!\"}")))))
+
+(deftest read-json-test
+  (is (= {:greeting "Hello!"}
+         (misc/read-json (StringReader. "{\"greeting\" : \"Hello!\"}")))))
 
 (deftest sha-256-test
   (is (= "d2cf1a50c1a07db39d8397d4815da14aa7c7230775bb3c94ea62c9855cf9488d"

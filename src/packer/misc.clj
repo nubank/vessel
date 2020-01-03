@@ -1,5 +1,6 @@
 (ns packer.misc
   (:require [clojure.data.json :as json]
+            [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as string])
   (:import clojure.lang.Sequential
@@ -23,23 +24,24 @@
               result))
           m (partition 2 kvs)))
 
-(defn sequential->java-list ^ArrayList
+;; Java interop functions
+
+(defn  ^ArrayList sequential->java-list
   [^Sequential seq]
   (ArrayList. seq))
 
-(defn string->java-path ^Path
+(defn  ^Path string->java-path
   [^String path]
   (Paths/get path (into-array String [])))
 
-(defn string->absolute-unix-path ^AbsoluteUnixPath
+(defn ^AbsoluteUnixPath string->absolute-unix-path
   [^String path]
   (AbsoluteUnixPath/get path))
 
-(defn java-consumer
+(defn   ^Consumer java-consumer
   "Returns a java.util.function.Consumer instance that calls the function f.
 
   f is a 1-arity function that returns nothing."
-  ^Consumer
   [f]
   (reify Consumer
     (accept [_ arg]
@@ -69,7 +71,7 @@
          (name time-unit)
          (str (name time-unit) "s"))))
 
-(defn duration->string
+(defn ^String duration->string
   "Returns a friendly representation of the duration object in question."
   [^Duration duration]
   (let [millis (.toMillis duration)]
@@ -103,6 +105,12 @@
   "Returns true if the file exists or false otherwise."
   [^File file]
   (.exists file))
+
+(defn filter-files
+  "Given a sequence of java.io.File objects (either files or
+  directories), returns just the files."
+  [fs]
+  (filter #(.isFile %) fs))
 
 (defn ^File make-dir
   "Creates the directory in question and all of its parents.
@@ -138,6 +146,13 @@
   ^File
   [^File file ^File base]
   (.. base toPath (relativize (.toPath file)) toFile))
+
+(defn read-edn
+  "Reads an EDN object and parses it as Clojure data.
+
+  input can be any object supported by clojure.core/slurp."
+  [input]
+  (edn/read-string (slurp input)))
 
 (defn read-json
   "Reads a JSON object and parses it as Clojure data.
