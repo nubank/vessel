@@ -1,5 +1,7 @@
 (ns packer.image
-  (:require [clojure.java.io :as io])
+  (:require [clojure.java.io :as io]
+            [clojure.string :as string]
+            [packer.misc :as misc])
   (:import java.io.File))
 
 (defn internal-dep?
@@ -10,23 +12,22 @@
      (some #(re-find % (.getPath file))
            internal-deps-re))))
 
-(defn- same-file-as-one-of?
-  [^File file files-to-compare]
-  (boolean
-   (when (seq files-to-compare)
-     (some #(= (.getName file)
-               (.getName %))
-           files-to-compare))))
+(defn- subpath?
+  "Returns true if this is a subpath of that."
+  [^File this ^File that]
+  (string/includes? (.getPath that) (.getPath this)))
 
 (defn resource?
   "Is the file in question a resource file?"
-  [^File file {:keys [known-resources]}]
-  (same-file-as-one-of? file known-resources))
+  [^File file {:keys [resource-paths]}]
+  (boolean
+   (some #(subpath? % file) resource-paths)))
 
 (defn source-file?
   "Is the file in question a source file?"
-  [^File file {:keys [known-sources]}]
-  (same-file-as-one-of? file known-sources))
+  [^File file {:keys [source-paths]}]
+  (boolean
+   (some #(subpath? % file) source-paths)))
 
 (def ^:private classifiers
   "Map of classifiers for files that will be part of each image layer.
@@ -34,32 +35,41 @@
   Keys are layer names and values are a tuple of [predicate
   score]. The score determines whether the layer will be topmost or
   undermost positioned at the resulting image."
-  {:external-deps [(constantly false) 0]
+  {:external-deps [(constantly false) 0] ;; default layer
    :internal-deps [internal-dep? 1]
-   :resources [resource? 2]
-   :source-files [source-file? 3]})
+   :resources     [resource? 2]
+   :source-files  [source-file? 3]})
+
+(defn- ^Boolean apply-classifier-predicate
+  "Applies the predicate on the file or map entry (whose value is a
+  java.io.File object to be classified)."
+  [pred file-or-map-entry options]
+  (cond
+    (instance? File file-or-map-entry) (pred file-or-map-entry options)
+    (map-entry? file-or-map-entry)     (pred (val file-or-map-entry) options)))
 
 (defn- classify
-  "Given a java.io.File, classifies it according to heuristics
-  determined by the provided options."
-  [^File file options]
+  "Given a java.io.File or a map entry whose value is a java.io.File,
+  classifies it according to heuristics extracted from the supplied
+  options."
+  [file-or-map-entry options]
   (or (some (fn [[layer-name [pred]]]
-              (when (pred file options)
+              (when (apply-classifier-predicate pred file-or-map-entry options)
                 layer-name))
             classifiers)
       :external-deps))
 
-(defn- web-inf-classes
-  ^String
-  [^File relative-to]
-  (.getPath (io/file relative-to "WEB-INF/classes")))
-
 (defn- image-layer
-  [[layer-name files] {:keys [^File app-root]}]
-  {:pre [app-root]}
-  #:image.layer{:name layer-name
-                :source (map #(.getPath %) files)
-                :target (web-inf-classes app-root)})
+  "Creates an image layer object from the supplied arguments."
+  [[layer-name files] {:keys [app-root target-dir]}]
+  #:image.layer{:name  layer-name
+                :files (map (fn [file-or-map-entry]
+                              (let [^File file (if (map-entry? file-or-map-entry)
+                                                 (key file-or-map-entry)
+                                                 file-or-map-entry)]
+                                #:image.layer{:source (.getPath file)
+                                              :target (.getPath (io/file app-root (misc/relativize file target-dir)))}))
+                            files)})
 
 (defn- layer-comparator
   "Compares two image layers."
@@ -69,10 +79,10 @@
              (sorting-score-of that))))
 
 (defn- organize-image-layers
-  "Takes a sequence of java.io.File objects and organize them into image
-  layers according to known heuristics."
-  [{:keys [files] :as options}]
-  {:pre [files]}
+  "Takes a sequence of java.io.File objects or map entries (whose values
+  are java.io.File objects) and organize them into image layers
+  according to known heuristics."
+  [files options]
   (->> files
        (group-by #(classify % options))
        (map #(image-layer % options))
@@ -81,14 +91,15 @@
 (defn- image-reference
   "Turns image information read from a manifest into an image reference
   map. "
-  [{:keys [registry name version]}]
-  #:image{:registry registry
-          :repository name
-          :tag version})
+  [{:keys [registry repository tag]}]
+  #:image{:registry   registry
+          :repository repository
+          :tag        tag})
 
-(defn render-containerization-plan
-  [{:keys [manifest ^File tarball] :as options}]
-  #:image{:from (image-reference (manifest :base-image))
-          :name (image-reference (manifest :image))
-          :layers (organize-image-layers options)
-          :tar-path (.getPath tarball)})
+(defn render-image-spec
+  [{:app/keys [classes lib]} {:keys [manifest ^File tarball] :as options}]
+  (let [files (into (vec classes) lib)]
+    #:image{:from     (image-reference (manifest :base-image))
+            :name     (image-reference (manifest :image))
+            :layers   (organize-image-layers files options)
+            :tar-path (.getPath tarball)}))

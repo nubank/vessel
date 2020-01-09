@@ -54,7 +54,7 @@
                   (unpack-jar jar-file dest-dir))]
       (-> (into context (get-project-insights project-root))
           (assoc :files files)
-          image/render-containerization-plan
+          image/render-image-spec
           jib/containerize))))
 
 (defn- write-manifest
