@@ -8,6 +8,7 @@
   (:import org.apache.commons.vfs2.VFS))
 
 (def tar-path "target/tests/jib-test/my-app.tar")
+
 (defn read-from-tarball
   [^String file-name]
   (let [cwd (str (.getCanonicalFile (io/file ".")))
@@ -27,8 +28,8 @@
                               #:image{:repository "my-app" :tag "v1"}
                               :layers
                               [#:image.layer{:name :resources
-                                             :source ["test/resources/greeting/greeting.txt"]
-                                             :target "/opt/app/WEB-INF/classes"}]
+                                             :files [#:image.layer{:source "test/resources/greeting/greeting.txt"
+                                                                   :target "/opt/app/WEB-INF/classes/greeting.txt"}]}]
                               :tar-path tar-path})
 
     (is (true? (misc/file-exists? (io/file tar-path)))))
