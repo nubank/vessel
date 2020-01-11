@@ -3,7 +3,8 @@
   (:require [clojure.java.io :as io]
             [packer.api :as api]
             [packer.cli :as cli]
-            [packer.misc :as misc]))
+            [packer.misc :as misc]
+            [clojure.string :as string]))
 
 (def ^:private cwd
   "Current working directory."
@@ -15,19 +16,20 @@
   (System/exit status))
 
 (def packer
-  {:desc "Containerization tool for Clojure applications"
+  {:desc "A containerization tool for Clojure applications"
    :commands
    {"containerize"
-    {:desc "Turns an input jar into a lightweight
-  container according to provided options"
+    {:desc "Containerize a Clojure application"
      :fn api/containerize
      :opts [["-a" "--app-root PATH"
              :id :app-root
-             :desc "app root of the container image. Classes and
-                      resource files will be copied to relative paths to the app
-                      root."
+             :desc "app root of the container image. Classes and resource files will be copied to relative paths to the app root."
              :default (io/file "/app")
              :parse-fn io/file]
+            ["-c" "--classpath PATHS"
+             :id :classpath-files
+             :desc "Directories and zip/jar files on the classpath in the same format expected by the java command"
+             :parse-fn (comp set (map io/file) #(string/split % #":"))]
             ["-e" "--extra-file PATH"
              :id :extra-files
              :desc "extra files to be copied to the container
@@ -36,12 +38,7 @@
              :parse-fn cli/parse-extra-file
              :validate cli/source-must-exist
              :assoc-fn cli/repeat-option]
-            ["-i" "--input JAR"
-             :id :jar-file
-             :desc "jar file to be containerized"
-             :parse-fn io/file
-             :validate cli/file-or-dir-must-exist]
-            ["-I" "--internal-deps REGEX"
+            ["-i" "--internal-deps REGEX"
              :id :internal-deps-re
              :desc "java regex to determine internal dependencies. Can be
             repeated many times for a logical or effect"
@@ -55,12 +52,22 @@
              :assoc-fn #(assoc %1 %2 (misc/read-json %3))]
             ["-p" "--project-root PATH"
              :id :project-root
-             :desc "root dir of the project containing the source
-                      code. Packer inspects the project to obtain some useful
-                      insights about how to organize layers."
+             :desc "root dir of the Clojure project to be built"
              :default cwd
              :parse-fn io/file
              :validate cli/file-or-dir-must-exist]
+            ["-s" "--source-path PATH"
+             :id :source-paths
+             :desc "Directories containing source files. This option can be repeated many times"
+             :parse-fn io/file
+             :validate-fn cli/file-or-dir-must-exist
+             :assoc-fn cli/repeat-option]
+            ["-r" "--resource-path PATH"
+             :id :resource-paths
+             :desc "Directories containing resource files. This option can be repeated many times"
+             :parse-fn io/file
+             :validate-fn cli/file-or-dir-must-exist
+             :assoc-fn cli/repeat-option]
             ["-o" "--output PATH"
              :id :tarball
              :desc "path to save the tarball containing the built image"
