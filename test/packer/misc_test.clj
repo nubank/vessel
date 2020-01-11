@@ -6,7 +6,7 @@
             [clojure.test.check.properties :as prop]
             [packer.misc :as misc]
             [packer.test-helpers :refer [ensure-clean-test-dir]])
-  (:import [java.io File StringReader StringWriter]
+  (:import [java.io StringReader StringWriter]
            [java.time Duration Instant]
            java.util.function.Consumer))
 
@@ -70,8 +70,20 @@
 
 (deftest make-dir-test
   (let [dir (misc/make-dir (io/file "target") "tests" "misc-test" "dir1" "dir2")]
-    (is (instance? File dir))
     (is (true? (misc/file-exists? dir)))))
+
+(deftest make-empty-dir-test
+  (testing "creates a new directory"
+    (let [dir (misc/make-empty-dir (io/file "target") "tests" "misc-test" "dir3" "dir4")]
+      (is (true? (misc/file-exists? dir)))))
+
+  (testing "when the directory in question already exists, guarantees that the
+  returned directory is empty"
+    (let [old-dir (misc/make-empty-dir (io/file "target") "tests" "misc-test" "dir5")
+          _       (spit (io/file old-dir "file.txt") "Lorem Ipsum")
+          new-dir (misc/make-empty-dir old-dir)]
+      (is (true? (misc/file-exists? new-dir)))
+      (is (empty? (.listFiles new-dir))))))
 
 (deftest relativize-test
   (is (= (io/file "deps.edn")

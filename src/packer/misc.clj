@@ -120,9 +120,22 @@
   [f & others]
   {:pos [(.isDirectory %)]}
   (let [dir (apply io/file f others)]
-    (io/make-parents dir)
-    (.mkdir dir)
+    (.mkdirs dir)
     dir))
+
+(defn make-empty-dir
+  "Creates the directory in question and all of its parents.
+
+  If the directory already exists, delete all existing files and
+  sub-directories.
+
+  The arguments are the same taken by clojure.java.io/file. Returns
+  the created directory."
+  [f & others]
+  (let [dir (apply io/file f others)]
+    (when (file-exists? dir)
+      (run! #(io/delete-file %) (reverse (file-seq dir))))
+    (make-dir dir)))
 
 (defmacro with-clean-dir
   "binding => [binding-symbol binding-value]
