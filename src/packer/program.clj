@@ -20,7 +20,7 @@
    :commands
    {"containerize"
     {:desc "Containerize a Clojure application"
-     :fn api/containerize
+     :fn   api/containerize
      :opts [["-a" "--app-root PATH"
              :id :app-root
              :desc "app root of the container image. Classes and resource files will be copied to relative paths to the app root."
@@ -29,7 +29,7 @@
             ["-c" "--classpath PATHS"
              :id :classpath-files
              :desc "Directories and zip/jar files on the classpath in the same format expected by the java command"
-             :parse-fn (comp set (map io/file) #(string/split % #":"))]
+             :parse-fn (comp set (partial map io/file) #(string/split % #":"))]
             ["-e" "--extra-file PATH"
              :id :extra-files
              :desc "extra files to be copied to the container
@@ -44,7 +44,11 @@
             repeated many times for a logical or effect"
              :parse-fn re-pattern
              :assoc-fn cli/repeat-option]
-            ["-m" "--manifest PATH"
+            ["-m" "--main-class NAMESPACE"
+             :id :main-class
+             :desc "Namespace that contains the application's entrypoint, with a :gen-class directive and a -main function"
+             :parse-fn symbol]
+            ["-M" "--manifest PATH"
              :id :manifest
              :desc "manifest file describing the image to be built"
              :parse-fn io/file
@@ -60,13 +64,13 @@
              :id :source-paths
              :desc "Directories containing source files. This option can be repeated many times"
              :parse-fn io/file
-             :validate-fn cli/file-or-dir-must-exist
+             :validate cli/file-or-dir-must-exist
              :assoc-fn cli/repeat-option]
             ["-r" "--resource-path PATH"
              :id :resource-paths
              :desc "Directories containing resource files. This option can be repeated many times"
              :parse-fn io/file
-             :validate-fn cli/file-or-dir-must-exist
+             :validate cli/file-or-dir-must-exist
              :assoc-fn cli/repeat-option]
             ["-o" "--output PATH"
              :id :tarball
@@ -76,7 +80,7 @@
 
     "image"
     {:desc "Generate an image manifest, optionally by extending a base image and/or merging other manifests"
-     :fn api/image
+     :fn   api/image
      :opts
      [["-a" "--attribute KEY-VALUE"
        :id :attributes
@@ -114,7 +118,7 @@
 
     "manifest"
     {:desc "Generate arbitrary manifests"
-     :fn api/manifest
+     :fn   api/manifest
      :opts
      [["-a" "--attribute KEY-VALUE"
        :id :attributes
