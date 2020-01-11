@@ -3,15 +3,14 @@
             [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as string])
-  (:import clojure.lang.Sequential
-           com.google.cloud.tools.jib.api.AbsoluteUnixPath
+  (:import com.google.cloud.tools.jib.api.AbsoluteUnixPath
            java.io.File
            [java.nio.file Path Paths]
            java.security.MessageDigest
            java.text.DecimalFormat
            [java.time Duration Instant]
-           [java.util ArrayList Locale]
-           java.util.function.Consumer))
+           java.util.function.Consumer
+           java.util.Locale))
 
 (defn assoc-some
   "Assoc's key and value into the associative data structure only when
@@ -25,10 +24,6 @@
           m (partition 2 kvs)))
 
 ;; Java interop functions
-
-(defn  ^ArrayList sequential->java-list
-  [^Sequential seq]
-  (ArrayList. seq))
 
 (defn  ^Path string->java-path
   [^String path]
@@ -97,10 +92,6 @@
                    emitter
                    (apply format message args))))
 
-(defn find-files-at
-  [^File dir]
-  (.listFiles dir))
-
 (defn file-exists?
   "Returns true if the file exists or false otherwise."
   [^File file]
@@ -136,21 +127,6 @@
     (when (file-exists? dir)
       (run! #(io/delete-file %) (reverse (file-seq dir))))
     (make-dir dir)))
-
-(defmacro with-clean-dir
-  "binding => [binding-symbol binding-value]
-  binding-value => java.io.File
-
-  Evaluates body in a context where the directory assigned to
-  binding-symbol exists and is an empty directory."
-  [binding & body]
-  {:pre [(vector? binding) (= 2 (count binding))]}
-  (let [[binding-symbol binding-value] binding]
-    `(let [^File ~binding-symbol ~binding-value]
-       (when (file-exists? ~binding-symbol)
-         (run! #(io/delete-file %) (reverse (file-seq ~binding-symbol))))
-       (.mkdir ~binding-symbol)
-       ~@body)))
 
 (defn ^File relativize
   "Given a file and a base directory, returns a new file representing
