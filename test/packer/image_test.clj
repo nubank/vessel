@@ -51,7 +51,8 @@ plan for the files in question"
                        :resource-paths   #{(io/file project-dir "resources")}
                        :source-paths     [(io/file project-dir "src")]
                        :manifest
-                       {:base-image {:repository "jetty" :registry "my-company.com" :tag "v1"}
+                       {:base-image
+                        {:image {:repository "jetty" :registry "my-company.com" :tag "v1"}}
                         :image      {:repository "my-app" :registry "my-company.com" :tag "v2"}}
                        :tarball          (io/file "my-app.tar")
                        :target-dir       target-dir}]

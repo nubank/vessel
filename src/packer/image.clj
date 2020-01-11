@@ -99,7 +99,7 @@
 (defn render-image-spec
   [{:app/keys [classes lib]} {:keys [manifest ^File tarball] :as options}]
   (let [files (into (vec classes) lib)]
-    #:image{:from     (image-reference (manifest :base-image))
-            :name     (image-reference (manifest :image))
+    #:image{:from     (image-reference (get-in manifest [:base-image :image]))
+            :name     (image-reference (get manifest :image))
             :layers   (organize-image-layers files options)
             :tar-path (.getPath tarball)}))
