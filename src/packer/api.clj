@@ -22,8 +22,8 @@
   [options]
   (with-elapsed-time
     (let [opts (assoc options :target-dir (misc/make-empty-dir ".packer"))]
-      (-> (builder/build-app options)
-          (image/render-image-spec options)
+      (-> (builder/build-app opts)
+          (image/render-image-spec opts)
           jib/containerize))))
 
 (defn- write-manifest
