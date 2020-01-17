@@ -1,7 +1,7 @@
-(ns packer.image
+(ns vessel.image
   (:require [clojure.java.io :as io]
             [clojure.string :as string]
-            [packer.misc :as misc])
+            [vessel.misc :as misc])
   (:import java.io.File))
 
 (defn internal-dep?

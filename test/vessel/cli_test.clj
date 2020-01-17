@@ -1,8 +1,8 @@
-(ns packer.cli-test
+(ns vessel.cli-test
   (:require [clojure.java.io :as io]
             [clojure.string :as string]
             [clojure.test :refer :all]
-            [packer.cli :as cli]))
+            [vessel.cli :as cli]))
 
 (defmacro with-err-str
   [& body]
@@ -21,7 +21,7 @@
   (println "Goodbye"
            (string/join ", " names)))
 
-(def packer
+(def vessel
   {:desc "FIXME"
    :commands
    {"greet"
@@ -45,32 +45,32 @@
 (deftest run-test
   (testing "calls the function assigned to the command in question"
     (is (= "Hello John Doe\n"
-           (with-out-str (cli/run packer ["greet"
+           (with-out-str (cli/run vessel ["greet"
                                           "-n" "John Doe"])))))
 
   (testing "the function `repeat-option`, when assigned to the `:assoc-fn`
   option, allows the flag to be repeated multiple times"
     (is (= "Hello John Doe, Jane Doe\n"
-           (with-out-str (cli/run packer ["greet"
+           (with-out-str (cli/run vessel ["greet"
                                           "-n" "John Doe"
                                           "-n" "Jane Doe"])))))
 
   (testing "returns 0 indicating success"
     (is (= 0
-           (cli/run packer ["greet"
+           (cli/run vessel ["greet"
                             "-n" "John Doe"]))))
 
-  (testing "shows the help message when one calls Packer with no arguments or with
+  (testing "shows the help message when one calls Vessel with no arguments or with
 the help flag"
-    (are [args] (= "Usage: packer [OPTIONS] COMMAND\n\nFIXME\n\nOptions:\n  -?, --help  Show this help message and exit\n\nCommands:\n  boom     Simply blows up\n  goodbye  Print a goodbye message\n  greet    Say a hello message for someone\n\nSee \"packer COMMAND --help\" for more information on a command\n"
+    (are [args] (= "Usage: vessel [OPTIONS] COMMAND\n\nFIXME\n\nOptions:\n  -?, --help  Show this help message and exit\n\nCommands:\n  boom     Simply blows up\n  goodbye  Print a goodbye message\n  greet    Say a hello message for someone\n\nSee \"vessel COMMAND --help\" for more information on a command\n"
                    (with-out-str
-                     (cli/run packer args)))
+                     (cli/run vessel args)))
       []
       ["-?"]
       ["--help"]))
 
   (testing "shows the help message for the command in question"
-    (is (= "Usage: packer greet [OPTIONS]
+    (is (= "Usage: vessel greet [OPTIONS]
 
 Say a hello message for someone
 
@@ -78,50 +78,50 @@ Options:
   -n, --name NAME  Name of the person to greet
   -?, --help       Show this help message and exit\n"
            (with-out-str
-             (cli/run packer ["greet" "--help"])))))
+             (cli/run vessel ["greet" "--help"])))))
 
   (testing "returns 0 after showing the help message"
     (is (= 0
-           (cli/run packer ["--help"])))
+           (cli/run vessel ["--help"])))
     (is (= 0
-           (cli/run packer ["goodbye" "--help"]))))
+           (cli/run vessel ["goodbye" "--help"]))))
 
-  (testing "shows a meaningful message when Packer is called with wrong options"
-    (is (= "Packer: Unknown option: \"--foo\"\nSee \"packer --help\"\n"
+  (testing "shows a meaningful message when Vessel is called with wrong options"
+    (is (= "Vessel: Unknown option: \"--foo\"\nSee \"vessel --help\"\n"
            (with-err-str
-             (cli/run packer ["--foo"])))))
+             (cli/run vessel ["--foo"])))))
 
   (testing "returns 1 indicating the error"
     (is (= 1
-           (cli/run packer ["--foo"]))))
+           (cli/run vessel ["--foo"]))))
 
   (testing "shows a meaningful message when the command in question doesn't
   exist"
-    (is (= "Packer: \"build\" isn't a Packer command\nSee \"packer --help\"\n"
+    (is (= "Vessel: \"build\" isn't a Vessel command\nSee \"vessel --help\"\n"
            (with-err-str
-             (cli/run packer ["build" "--help"])))))
+             (cli/run vessel ["build" "--help"])))))
 
   (testing "returns 127 indicating that the command could not be found"
     (is (= 127
-           (cli/run packer ["build" "--help"]))))
+           (cli/run vessel ["build" "--help"]))))
 
   (testing "shows a meaningful message when a command is mistakenly called"
-    (is (= "Packer: Missing required argument for \"-n NAME\"\nSee \"packer greet --help\"\n"
+    (is (= "Vessel: Missing required argument for \"-n NAME\"\nSee \"vessel greet --help\"\n"
            (with-err-str
-             (cli/run packer ["greet" "-n"])))))
+             (cli/run vessel ["greet" "-n"])))))
 
   (testing "returns 1 indicating an error"
     (is (= 1
-           (cli/run packer ["greet" "-n"]))))
+           (cli/run vessel ["greet" "-n"]))))
 
   (testing "shows an error message when the command throws an exception"
-    (is (= "Packer: Boom!\n"
+    (is (= "Vessel: Boom!\n"
            (with-err-str
-             (cli/run packer ["boom"])))))
+             (cli/run vessel ["boom"])))))
 
   (testing "returns 1 indicating an error"
     (is (= 1
-           (cli/run packer ["boom"])))))
+           (cli/run vessel ["boom"])))))
 
 (deftest parse-attribute-test
   (testing "parses the input in the form `key:value`"

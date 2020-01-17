@@ -1,12 +1,12 @@
-(ns packer.builder-test
+(ns vessel.builder-test
   (:require [clojure.java.io :as io]
             [clojure.string :as string]
             [clojure.test :refer :all]
             [matcher-combinators.matchers :as m]
             [matcher-combinators.test :refer [match?]]
-            [packer.builder :as builder]
-            [packer.misc :as misc]
-            [packer.test-helpers :refer [ensure-clean-test-dir]])
+            [vessel.builder :as builder]
+            [vessel.misc :as misc]
+            [vessel.test-helpers :refer [ensure-clean-test-dir]])
   (:import java.io.File))
 
 (use-fixtures :once (ensure-clean-test-dir))

@@ -1,4 +1,4 @@
-(ns packer.builder
+(ns vessel.builder
   "Builder for Clojure applications."
   (:refer-clojure :exclude [compile])
   (:require [clojure.java.classpath :as java.classpath]
@@ -6,7 +6,7 @@
             [clojure.set :as set]
             [clojure.string :as string]
             [clojure.tools.namespace.find :as namespace.find]
-            [packer.misc :as misc])
+            [vessel.misc :as misc])
   (:import clojure.lang.Symbol
            [java.io File InputStream]
            [java.net URL URLClassLoader]

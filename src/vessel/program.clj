@@ -1,9 +1,9 @@
-(ns packer.program
+(ns vessel.program
   (:gen-class)
   (:require [clojure.java.io :as io]
-            [packer.api :as api]
-            [packer.cli :as cli]
-            [packer.misc :as misc]
+            [vessel.api :as api]
+            [vessel.cli :as cli]
+            [vessel.misc :as misc]
             [clojure.string :as string]))
 
 (def ^:private cwd
@@ -15,7 +15,7 @@
   [status]
   (System/exit status))
 
-(def packer
+(def vessel
   {:desc "A containerization tool for Clojure applications"
    :commands
    {"containerize"
@@ -139,4 +139,4 @@
 
 (defn -main
   [& args]
-  (exit (cli/run packer args)))
+  (exit (cli/run vessel args)))

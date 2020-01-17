@@ -1,11 +1,11 @@
-(ns packer.misc-test
+(ns vessel.misc-test
   (:require [clojure.java.io :as io]
             [clojure.test :refer :all]
             [clojure.test.check.clojure-test :refer [defspec]]
             [clojure.test.check.generators :as gen]
             [clojure.test.check.properties :as prop]
-            [packer.misc :as misc]
-            [packer.test-helpers :refer [ensure-clean-test-dir]])
+            [vessel.misc :as misc]
+            [vessel.test-helpers :refer [ensure-clean-test-dir]])
   (:import [java.io StringReader StringWriter]
            [java.time Duration Instant]
            java.util.function.Consumer))

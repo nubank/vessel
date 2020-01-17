@@ -1,4 +1,4 @@
-(ns packer.test-helpers
+(ns vessel.test-helpers
   (:require [clojure.java.io :as io]
             [clojure.string :as string])
   (:import java.io.File))

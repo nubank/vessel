@@ -1,9 +1,9 @@
-(ns packer.api-test
+(ns vessel.api-test
   (:require [clojure.java.io :as io]
             [clojure.test :refer :all]
             [matcher-combinators.test :refer [match?]]
-            [packer.api :as api]
-            [packer.misc :as misc]))
+            [vessel.api :as api]
+            [vessel.misc :as misc]))
 
 (def my-app-manifest (io/file "target/my-app.json"))
 

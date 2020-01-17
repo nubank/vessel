@@ -1,6 +1,6 @@
-(ns packer.jib
+(ns vessel.jib
   "Clojure wrapper for Google Jib."
-  (:require [packer.misc :as misc])
+  (:require [vessel.misc :as misc])
   (:import [com.google.cloud.tools.jib.api Containerizer ImageReference Jib JibContainerBuilder LayerConfiguration LayerConfiguration$Builder LogEvent RegistryImage TarImage]
            com.google.cloud.tools.jib.event.events.ProgressEvent
            com.google.cloud.tools.jib.frontend.CredentialRetrieverFactory))
@@ -30,7 +30,7 @@
   (.. Containerizer
       (to (.. TarImage (at (misc/string->java-path tar-path))
               (named (make-image-reference name))))
-      (setToolName "packer")
+      (setToolName "vessel")
       (addEventHandler LogEvent log-event-handler)
       (addEventHandler ProgressEvent progress-event-handler)))
 

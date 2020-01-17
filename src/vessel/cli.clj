@@ -1,9 +1,9 @@
-(ns packer.cli
+(ns vessel.cli
   "Functions for dealing with command line input and output."
   (:require [clojure.java.io :as io]
             [clojure.string :as string]
             [clojure.tools.cli :as tools.cli]
-            [packer.misc :as misc :refer [with-stderr]]))
+            [vessel.misc :as misc :refer [with-stderr]]))
 
 (def ^:private help
   "Help option."
@@ -12,7 +12,7 @@
    :desc "Show this help message and exit"])
 
 (defn- show-program-help?
-  "Shall Packer show the help message?"
+  "Shall Vessel show the help message?"
   [{:keys [arguments options]}]
   (or (and (empty? options)
            (empty? arguments))
@@ -33,7 +33,7 @@
     (println "Commands:")
     (run! println commands)
     (println)
-    (println "See \"packer COMMAND --help\" for more information on a command"))
+    (println "See \"vessel COMMAND --help\" for more information on a command"))
   0)
 
 (defn- show-errors
@@ -42,7 +42,7 @@
   Returns 1 indicating an error in the execution."
   [{:keys [errors tip]}]
   (with-stderr
-    (print "Packer: ")
+    (print "Vessel: ")
     (run! println errors)
     (when tip
       (printf "See \"%s\"%n" tip))
@@ -53,7 +53,7 @@
 
   Returns 127 (the Linux error code for non-existing commands)."
   [{:keys [cmd] :as result}]
-  (show-errors (assoc result :errors [(format "\"%s\" isn't a Packer command" cmd)]))
+  (show-errors (assoc result :errors [(format "\"%s\" isn't a Vessel command" cmd)]))
   127)
 
 (defn- run-command*
@@ -74,8 +74,8 @@
   (-> (tools.cli/parse-opts args (conj opts help))
       (assoc :desc desc
              :fn fn
-             :usage (format "packer %s [OPTIONS]" cmd)
-             :tip (format "packer %s --help" cmd))))
+             :usage (format "vessel %s [OPTIONS]" cmd)
+             :tip (format "vessel %s --help" cmd))))
 
 (defn- run-command
   [command args]
@@ -107,8 +107,8 @@
            :cmd cmd
            :commands (formatted-commands program)
            :desc desc
-           :tip "packer --help"
-           :usage (format "packer [OPTIONS] COMMAND"))))
+           :tip "vessel --help"
+           :usage (format "vessel [OPTIONS] COMMAND"))))
 
 (defn- run*
   [program input]

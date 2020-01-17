@@ -1,9 +1,9 @@
-(ns packer.api
+(ns vessel.api
   (:require [clojure.data.json :as json]
-            [packer.builder :as builder]
-            [packer.image :as image]
-            [packer.jib :as jib]
-            [packer.misc :as misc])
+            [vessel.builder :as builder]
+            [vessel.image :as image]
+            [vessel.jib :as jib]
+            [vessel.misc :as misc])
   (:import java.io.Writer))
 
 (defmacro ^:private with-elapsed-time
@@ -13,7 +13,7 @@
   [& body]
   `(let [start#  (misc/now)
          result# (do ~@body)]
-     (misc/log :info "packer" "Successfully containerized in %s"
+     (misc/log :info "vessel" "Successfully containerized in %s"
                (misc/duration->string (misc/duration-between start# (misc/now))))
      result#))
 
@@ -21,7 +21,7 @@
   "Containerize a Clojure application."
   [options]
   (with-elapsed-time
-    (let [opts (assoc options :target-dir (misc/make-empty-dir ".packer"))]
+    (let [opts (assoc options :target-dir (misc/make-empty-dir ".vessel"))]
       (-> (builder/build-app opts)
           (image/render-image-spec opts)
           jib/containerize))))

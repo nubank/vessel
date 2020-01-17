@@ -5,11 +5,11 @@ echo "Cleaning classes directory..."
 
 rm -rf classes
 
-echo "Compiling Packer..."
+echo "Compiling Vessel..."
 
 mkdir classes
 
-clojure -e "(compile 'packer.program)"
+clojure -e "(compile 'vessel.program)"
 
 echo "Extracting compiled dependencies into classes directory..."
 
@@ -25,12 +25,12 @@ done
 
 echo "Generating uberjar..."
 
-jar -cvfe packer.jar packer.program .
+jar -cvfe vessel.jar vessel.program .
 
 cd ..
 
 mkdir -p target
 
-cp classes/packer.jar target/
+cp classes/vessel.jar target/
 
 echo "Created " $(ls target/*.jar)

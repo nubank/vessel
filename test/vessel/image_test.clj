@@ -1,7 +1,7 @@
-(ns packer.image-test
+(ns vessel.image-test
   (:require [clojure.java.io :as io]
             [clojure.test :refer :all]
-            [packer.image :as image]))
+            [vessel.image :as image]))
 
 (deftest internal-dep?-test
   (let [m2          (io/file "/home/builder/.m2/repository")
@@ -37,7 +37,7 @@
 (deftest render-image-spec-test
   (testing "takes an options map and returns a map representing a containerization
 plan for the files in question"
-    (let [target-dir  (io/file "/home/builder/projects/my-app/.packer")
+    (let [target-dir  (io/file "/home/builder/projects/my-app/.vessel")
           web-inf-dir (io/file target-dir "WEB-INF")
           project-dir (io/file "/home/builder/projects/my-app")
           m2-dir      (io/file "/home/builder/.m2/repository")
@@ -63,19 +63,19 @@ plan for the files in question"
                      :layers
                      [#:image.layer{:name :external-deps
                                     :files
-                                    [#:image.layer{:source "/home/builder/projects/my-app/.packer/WEB-INF/lib/aws-java-sdk-1.11.602.jar"
+                                    [#:image.layer{:source "/home/builder/projects/my-app/.vessel/WEB-INF/lib/aws-java-sdk-1.11.602.jar"
                                                    :target "/opt/app/WEB-INF/lib/aws-java-sdk-1.11.602.jar"}]}
                       #:image.layer{:name :internal-deps
                                     :files
-                                    [#:image.layer{:source "/home/builder/projects/my-app/.packer/WEB-INF/classes/my_company/core__init.class"
+                                    [#:image.layer{:source "/home/builder/projects/my-app/.vessel/WEB-INF/classes/my_company/core__init.class"
                                                    :target "/opt/app/WEB-INF/classes/my_company/core__init.class"}]}
                       #:image.layer{:name :resources
                                     :files
-                                    [#:image.layer{:source "/home/builder/projects/my-app/.packer/WEB-INF/classes/config.edn"
+                                    [#:image.layer{:source "/home/builder/projects/my-app/.vessel/WEB-INF/classes/config.edn"
                                                    :target "/opt/app/WEB-INF/classes/config.edn"}]}
                       #:image.layer{:name :source-files
                                     :files
-                                    [#:image.layer{:source "/home/builder/projects/my-app/.packer/WEB-INF/classes/my_app/server.class"
+                                    [#:image.layer{:source "/home/builder/projects/my-app/.vessel/WEB-INF/classes/my_app/server.class"
                                                    :target "/opt/app/WEB-INF/classes/my_app/server.class"}]}]
                      :tar-path "my-app.tar"}
              (image/render-image-spec app options))))))

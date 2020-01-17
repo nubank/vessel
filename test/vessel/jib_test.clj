@@ -1,10 +1,10 @@
-(ns packer.jib-test
+(ns vessel.jib-test
   (:require [clojure.java.io :as io]
             [clojure.test :refer :all]
             [matcher-combinators.test :refer [match?]]
-            [packer.jib :as jib]
-            [packer.misc :as misc]
-            [packer.test-helpers :refer [ensure-clean-test-dir]])
+            [vessel.jib :as jib]
+            [vessel.misc :as misc]
+            [vessel.test-helpers :refer [ensure-clean-test-dir]])
   (:import org.apache.commons.vfs2.VFS))
 
 (def tar-path "target/tests/jib-test/my-app.tar")
