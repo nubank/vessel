@@ -91,10 +91,10 @@
                   (get-file-names (io/file target "WEB-INF/classes")))))
 
     (testing "the lib directory has some known files"
-      (is (match? (m/embeds [#"^core\.specs.*\.jar$"
+      (is (match? (m/prefix [#"^core\.specs.*\.jar$"
                              #"^javax\.servlet-api.*\.jar$"
-                             #"^jetty-server.*\.jar$"])
-                  (get-file-names (io/file target "WEB-INF/lib")))))
+                             #"^jetty-http.*\.jar$"])
+                  (sort (get-file-names (io/file target "WEB-INF/lib"))))))
 
     (testing "the output data contains a map in the :app/classes key whose keys
       match the existing files at the classes directory"
