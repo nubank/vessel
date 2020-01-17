@@ -35,8 +35,8 @@
       true?  (io/file more-sources "my_app/misc.clj") #{sources more-sources})))
 
 (deftest render-image-spec-test
-  (testing "takes an options map and returns a map representing a containerization
-plan for the files in question"
+  (testing "takes an options map and returns a map representing an image spec
+  for the files in question"
     (let [target-dir  (io/file "/home/builder/projects/my-app/.vessel")
           web-inf-dir (io/file target-dir "WEB-INF")
           project-dir (io/file "/home/builder/projects/my-app")
@@ -53,7 +53,7 @@ plan for the files in question"
                        :manifest
                        {:base-image
                         {:image {:repository "jetty" :registry "my-company.com" :tag "v1"}}
-                        :image      {:repository "my-app" :registry "my-company.com" :tag "v2"}}
+                        :image {:repository "my-app" :registry "my-company.com" :tag "v2"}}
                        :tarball          (io/file "my-app.tar")
                        :target-dir       target-dir}]
       (is (= #:image{:from
@@ -61,21 +61,25 @@ plan for the files in question"
                      :name
                      #:image   {:registry "my-company.com" :repository "my-app" :tag "v2"}
                      :layers
-                     [#:image.layer{:name :external-deps
+                     [#:image.layer{:name   "external-deps"
                                     :files
                                     [#:image.layer{:source "/home/builder/projects/my-app/.vessel/WEB-INF/lib/aws-java-sdk-1.11.602.jar"
-                                                   :target "/opt/app/WEB-INF/lib/aws-java-sdk-1.11.602.jar"}]}
-                      #:image.layer{:name :internal-deps
+                                                   :target "/opt/app/WEB-INF/lib/aws-java-sdk-1.11.602.jar"}]
+                                    :weight 1}
+                      #:image.layer{:name   "internal-deps"
                                     :files
                                     [#:image.layer{:source "/home/builder/projects/my-app/.vessel/WEB-INF/classes/my_company/core__init.class"
-                                                   :target "/opt/app/WEB-INF/classes/my_company/core__init.class"}]}
-                      #:image.layer{:name :resources
+                                                   :target "/opt/app/WEB-INF/classes/my_company/core__init.class"}]
+                                    :weight 3}
+                      #:image.layer{:name   "resources"
                                     :files
                                     [#:image.layer{:source "/home/builder/projects/my-app/.vessel/WEB-INF/classes/config.edn"
-                                                   :target "/opt/app/WEB-INF/classes/config.edn"}]}
-                      #:image.layer{:name :source-files
+                                                   :target "/opt/app/WEB-INF/classes/config.edn"}]
+                                    :weight 5}
+                      #:image.layer{:name   "sources"
                                     :files
                                     [#:image.layer{:source "/home/builder/projects/my-app/.vessel/WEB-INF/classes/my_app/server.class"
-                                                   :target "/opt/app/WEB-INF/classes/my_app/server.class"}]}]
+                                                   :target "/opt/app/WEB-INF/classes/my_app/server.class"}]
+                                    :weight 7}]
                      :tar-path "my-app.tar"}
              (image/render-image-spec app options))))))

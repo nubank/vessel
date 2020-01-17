@@ -33,12 +33,12 @@
   "Map of classifiers for files that will be part of each image layer.
 
   Keys are layer names and values are a tuple of [predicate
-  score]. The score determines whether the layer will be topmost or
+  weight]. The weight determines whether the layer will be topmost or
   undermost positioned at the resulting image."
-  {:external-deps [(constantly false) 0] ;; default layer
-   :internal-deps [internal-dep? 1]
-   :resources     [resource? 2]
-   :source-files  [source-file? 3]})
+  {"external-deps" [(constantly false) 1] ;; default layer
+   "internal-deps" [internal-dep? 3]
+   "resources"     [resource? 5]
+   "sources"  [source-file? 7]})
 
 (defn- ^Boolean apply-classifier-predicate
   "Applies the predicate on the file or map entry (whose value is a
@@ -57,10 +57,10 @@
               (when (apply-classifier-predicate pred file-or-map-entry options)
                 layer-name))
             classifiers)
-      :external-deps))
+      "external-deps"))
 
 (defn- image-layer
-  "Creates an image layer object from the supplied arguments."
+  "Creates an image layer map from the supplied arguments."
   [[layer-name files] {:keys [app-root target-dir]}]
   #:image.layer{:name  layer-name
                 :files (map (fn [file-or-map-entry]
@@ -69,14 +69,14 @@
                                                  file-or-map-entry)]
                                 #:image.layer{:source (.getPath file)
                                               :target (.getPath (io/file app-root (misc/relativize file target-dir)))}))
-                            files)})
+                            files)
+                :weight (second (get classifiers layer-name))})
 
 (defn- layer-comparator
   "Compares two image layers."
   [this that]
-  (let [sorting-score-of #(last (get classifiers (:image.layer/name %)))]
-    (compare (sorting-score-of this)
-             (sorting-score-of that))))
+  (compare (get this :image.layer/weight)
+           (get that :image.layer/weight)))
 
 (defn- organize-image-layers
   "Takes a sequence of java.io.File objects or map entries (whose values
