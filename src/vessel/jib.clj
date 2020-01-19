@@ -41,7 +41,7 @@
 (defn- ^LayerConfiguration make-layer-configuration
   "Makes a LayerConfiguration object from the supplied data structure."
   [{:image.layer/keys [name files]}]
-  (loop [^LayerConfiguration$Builder layer (.. LayerConfiguration builder (setName (clojure.core/name name)))
+  (loop [^LayerConfiguration$Builder layer (.. LayerConfiguration builder (setName name))
          files files]
     (if-not (seq files)
       (.build layer)
