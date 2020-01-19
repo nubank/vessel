@@ -4,6 +4,26 @@
             [vessel.misc :as misc])
   (:import java.io.File))
 
+(defn- make-layers-for-extra-paths
+  "Given a set of extra-paths (maps containing the keys :source, :target
+  and :churn), returns a sequence of layers by grouping files
+  according to their churn."
+  [extra-paths]
+  (->> extra-paths
+       (group-by :churn)
+       (map (fn [[churn files]]
+              #:image.layer{:files (map #(zipmap [:image.layer/source :image.layer/target] [(.getPath (:source %)) (.getPath (:target %))]) files)
+                            :churn churn}))
+       (sort-by :image.layer/churn)
+       (map-indexed (fn [index layer]
+                      (assoc layer :image.layer/name (str "extra-files-" (inc index)))))))
+
+(defn- concat-with-extra-paths
+  [{:keys [extra-paths]} layers]
+  (if (seq extra-paths)
+    (into (make-layers-for-extra-paths extra-paths) layers)
+    layers))
+
 (defn internal-dep?
   "Is the file in question an internal dependency?"
   [^File file {:keys [internal-deps-re]}]
@@ -33,7 +53,7 @@
   "Map of classifiers for files that will be part of each image layer.
 
   Keys are layer names and values are a tuple of [predicate
-  weight]. The weight determines whether the layer will be topmost or
+  churn]. The churn determines whether the layer will be topmost or
   undermost positioned at the resulting image."
   {"external-deps" [(constantly false) 1] ;; default layer
    "internal-deps" [internal-dep? 3]
@@ -70,13 +90,13 @@
                                 #:image.layer{:source (.getPath file)
                                               :target (.getPath (io/file app-root (misc/relativize file target-dir)))}))
                             files)
-                :weight (second (get classifiers layer-name))})
+                :churn (second (get classifiers layer-name))})
 
 (defn- layer-comparator
   "Compares two image layers."
   [this that]
-  (compare (get this :image.layer/weight)
-           (get that :image.layer/weight)))
+  (compare (get this :image.layer/churn)
+           (get that :image.layer/churn)))
 
 (defn- organize-image-layers
   "Takes a sequence of java.io.File objects or map entries (whose values
@@ -86,6 +106,7 @@
   (->> files
        (group-by #(classify % options))
        (map #(image-layer % options))
+       (concat-with-extra-paths options)
        (sort layer-comparator)))
 
 (defn- image-reference
