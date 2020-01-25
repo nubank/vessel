@@ -35,7 +35,7 @@
              :desc "extra files to be copied to the container
                       image. The value must be passed in the form source:target
                       and this option can be repeated many times"
-             :parse-fn cli/parse-extra-file
+             :parse-fn cli/parse-extra-path
              :validate cli/source-must-exist
              :assoc-fn cli/repeat-option]
             ["-i" "--internal-deps REGEX"

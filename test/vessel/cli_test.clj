@@ -26,21 +26,21 @@
    :commands
    {"greet"
     {:desc "Say a hello message for someone"
-     :fn greet
+     :fn   greet
      :opts [["-n" "--name NAME"
              :id :names
              :desc "Name of the person to greet"
              :assoc-fn cli/repeat-option]]}
     "goodbye"
     {:desc "Print a goodbye message"
-     :fn greet
+     :fn   greet
      :opts [["-n" "--name NAME"
              :id :names
              :desc "Name of the person to say goodbye to"
              :assoc-fn cli/repeat-option]]}
     "boom"
     {:desc "Simply blows up"
-     :fn (fn [_] (throw (Exception. "Boom!")))}}})
+     :fn   (fn [_] (throw (Exception. "Boom!")))}}})
 
 (deftest run-test
   (testing "calls the function assigned to the command in question"
@@ -132,15 +132,26 @@ Options:
     (is (thrown-with-msg? IllegalArgumentException #"^Invalid attribute format.*"
                           (cli/parse-attribute "name")))))
 
-(deftest parse-extra-file-test
+(deftest parse-extra-path-test
   (testing "parses the input in the form `source:target`"
     (is (= {:source (io/file "web.xml")
-            :target (io/file "/app")}
-           (cli/parse-extra-file "web.xml:/app"))))
+            :target (io/file "/app/web.xml")
+            :churn  0}
+           (cli/parse-extra-path "web.xml:/app/web.xml"))))
+
+  (testing "parses the input in the form `source:target@churn`"
+    (is (= {:source (io/file "web.xml")
+            :target (io/file "/app/web.xml")
+            :churn  2}
+           (cli/parse-extra-path "web.xml:/app/web.xml@2"))))
 
   (testing "throws an exception when the input is malformed"
-    (is (thrown-with-msg? IllegalArgumentException #"^Invalid extra-file format.*"
-                          (cli/parse-extra-file "web.xml")))))
+    (is (thrown-with-msg? IllegalArgumentException #"^Invalid extra-path format.*"
+                          (cli/parse-extra-path "web.xml"))))
+
+  (testing "throws an exception when the churn isn't an integer"
+    (is (thrown-with-msg? IllegalArgumentException #"Expected an integer but got 'foo' in the churn field of the extra-path specification\."
+                          (cli/parse-extra-path "web.xml:/app/web.xml@foo")))))
 
 (defn validate
   [[validate-fn message] input]

@@ -88,10 +88,10 @@
   "Given a program spec, returns a sequence of formatted commands to be
   shown in the help message."
   [program]
-  (let [lines (->> program
-                   :commands
-                   (map #(vector (first %) (:desc (second %))))
-                   (sort-by first))
+  (let [lines   (->> program
+                     :commands
+                     (map #(vector (first %) (:desc (second %))))
+                     (sort-by first))
         lengths (map count (apply map (partial max-key count)  lines))]
     (tools.cli/format-lines lengths lines)))
 
@@ -113,12 +113,12 @@
 (defn- run*
   [program input]
   (let [{:keys [errors cmd args] :as result} (parse-input program input)
-        spec (get-in program [:commands cmd])]
+        spec                                 (get-in program [:commands cmd])]
     (cond
-      errors (show-errors result)
+      errors                      (show-errors result)
       (show-program-help? result) (show-help result)
-      (nil? spec) (command-not-found result)
-      :else (run-command (assoc spec :cmd cmd) args))))
+      (nil? spec)                 (command-not-found result)
+      :else                       (run-command (assoc spec :cmd cmd) args))))
 
 (defn run
   [program args]
@@ -143,14 +143,39 @@
   specify attributes in the form key:value")]
     (update key+value 0 keyword)))
 
-(defn parse-extra-file
-  "Takes an extra file specification in the form `source:target` and
-  returns a map containing two keys: :source and :target (both
-  instances of java.io.File)."
+(defn- parse-churn
   [^String input]
-  (let [source+target (split-at-colon input "Invalid extra-file format. Please, specify extra
-    files in the form source:target")]
-    (zipmap [:source :target] (map io/file source+target))))
+  (if-not input
+    0
+    (try
+      (Integer/parseInt input)
+      (catch NumberFormatException _
+        (throw (IllegalArgumentException. (format "Expected an integer but got '%s' in the churn field of the extra-path specification." input)))))))
+
+(defn parse-extra-path
+  "Takes an extra path specification in the form `source:target` or
+  `source:target@churn` and returns a map containing the following
+  keys:
+
+  :source java.io.File
+
+  The file to be copied to the resulting image.
+
+  :target java.io.File
+
+  The absolute path to which the file in question must be copied.
+
+  :churn Integer
+
+  An integer indicating how often this file changes. Defaults to 0."
+  [^String input]
+  (let [[source rest]  (split-at-colon input
+                                       "Invalid extra-path format.
+Please, specify extra paths in the form source:target or source:target@churn.")
+        [target churn] (string/split rest #"@")]
+    {:source (io/file source)
+     :target (io/file target)
+     :churn  (parse-churn churn)}))
 
 (def file-or-dir-must-exist
   [misc/file-exists? "no such file or directory"])
