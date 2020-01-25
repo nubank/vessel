@@ -1,14 +1,14 @@
 (ns vessel.program
   (:gen-class)
   (:require [clojure.java.io :as io]
+            [clojure.string :as string]
             [vessel.api :as api]
             [vessel.cli :as cli]
-            [vessel.misc :as misc]
-            [clojure.string :as string]))
+            [vessel.misc :as misc]))
 
 (def ^:private cwd
   "Current working directory."
-  (io/file "."))
+  (.getCanonicalFile (io/file ".")))
 
 (defn- exit
   "Terminates the JVM with the status code."
@@ -23,25 +23,22 @@
      :fn   api/containerize
      :opts [["-a" "--app-root PATH"
              :id :app-root
-             :desc "app root of the container image. Classes and resource files will be copied to relative paths to the app root."
+             :desc "app root of the container image. Classes and resource files will be copied to relative paths to the app root"
              :default (io/file "/app")
              :parse-fn io/file]
             ["-c" "--classpath PATHS"
              :id :classpath-files
              :desc "Directories and zip/jar files on the classpath in the same format expected by the java command"
              :parse-fn (comp set (partial map io/file) #(string/split % #":"))]
-            ["-e" "--extra-file PATH"
-             :id :extra-files
-             :desc "extra files to be copied to the container
-                      image. The value must be passed in the form source:target
-                      and this option can be repeated many times"
+            ["-e" "--extra-path PATH"
+             :id :extra-paths
+             :desc "extra files to be copied to the container image. The value must be passed in the form source:target or source:target@churn and this option can be repeated many times"
              :parse-fn cli/parse-extra-path
              :validate cli/source-must-exist
              :assoc-fn cli/repeat-option]
             ["-i" "--internal-deps REGEX"
              :id :internal-deps-re
-             :desc "java regex to determine internal dependencies. Can be
-            repeated many times for a logical or effect"
+             :desc "java regex to determine internal dependencies. Can be repeated many times for a logical or effect"
              :parse-fn re-pattern
              :assoc-fn cli/repeat-option]
             ["-m" "--main-class NAMESPACE"
