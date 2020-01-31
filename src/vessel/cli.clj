@@ -128,8 +128,12 @@
       (show-errors {:errors [(.getMessage e)]}))))
 
 (defn- split-at-colon
+  "Splits the input into two parts divided by the first colon.
+
+  Throws an IllegalArgumentException with the supplied message if the
+  input is malformed (i.e. can't be split as explained above)."
   [^String input ^String message]
-  (let [parts (string/split input #"\s*:\s*")]
+  (let [parts (vec (rest (re-matches #"([^:]+):(.*)" input)))]
     (if (= 2 (count parts))
       parts
       (throw (IllegalArgumentException. message)))))

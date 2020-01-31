@@ -128,6 +128,10 @@ Options:
     (is (= [:name "my-app"]
            (cli/parse-attribute "name:my-app"))))
 
+  (testing "the value can contain colons"
+    (is (= [:build-date "Fri Jan 31 12:04:26"]
+           (cli/parse-attribute "build-date:Fri Jan 31 12:04:26"))))
+
   (testing "throws an exception when the input is malformed"
     (is (thrown-with-msg? IllegalArgumentException #"^Invalid attribute format.*"
                           (cli/parse-attribute "name")))))
