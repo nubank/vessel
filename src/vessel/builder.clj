@@ -6,6 +6,7 @@
             [clojure.set :as set]
             [clojure.string :as string]
             [clojure.tools.namespace.find :as namespace.find]
+            [spinner.core :as spinner]
             [vessel.misc :as misc])
   (:import clojure.lang.Symbol
            [java.io File InputStream]
@@ -63,10 +64,14 @@
   (let [urls (into-array URL (map #(.toURL %) classpath-files))
         class-loader (URLClassLoader. urls (.. ClassLoader getSystemClassLoader getParent))
         clojure (.loadClass class-loader "clojure.main")
-        main (.getDeclaredMethod clojure "main" (into-array Class  [(.getClass (make-array String 0))]))]
+        main (.getDeclaredMethod clojure "main" (into-array Class  [(.getClass (make-array String 0))]))
+        _ (misc/log :info "Compiling %s..." main-class)
+        spin (spinner/create-and-start!)]
     @(future
-       (.. Thread currentThread (setContextClassLoader class-loader))
-       (.invoke main nil (main-args main-class target-dir)))))
+       (binding [*out* (java.io.StringWriter.)]
+         (.. Thread currentThread (setContextClassLoader class-loader))
+         (.invoke main nil (main-args main-class target-dir))
+         (spinner/stop! spin)))))
 
 (defn- find-namespaces
   "Returns all namespaces declared within the file (either a directory
