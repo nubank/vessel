@@ -13,7 +13,7 @@
   [& body]
   `(let [start#  (misc/now)
          result# (do ~@body)]
-     (misc/log :info "vessel" "Successfully containerized in %s"
+     (misc/log :info "Successfully containerized in %s"
                (misc/duration->string (misc/duration-between start# (misc/now))))
      result#))
 

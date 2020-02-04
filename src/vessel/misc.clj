@@ -83,14 +83,28 @@
   `(binding [*out* *err*]
      ~@body))
 
-(defn log
+(def ^:dynamic *verbose-logs* false)
+
+(defn- emit-log
+  [level emitter message]
+  (cond
+    *verbose-logs*                    (println (format "%s [%s] %s" level emitter message))
+    (#{"ERROR" "FATAL" "INFO"} level) (println message)))
+
+(defn log*
   [level emitter message & args]
-  (println (format "%s [%s] %s"
-                   (string/upper-case (if (keyword? level)
-                                        (name level)
-                                        (str level)))
-                   emitter
-                   (apply format message args))))
+  (let [the-level   (string/upper-case (if (keyword? level)
+                                         (name level) (str level)))
+        the-message (apply format message args)]
+    (if (#{"ERROR" "FATAL"} the-level)
+      (with-stderr (emit-log the-level emitter the-message))
+      (emit-log the-level emitter the-message))))
+
+(defmacro log
+  [level message & args]
+  `(apply log*
+          ~level ~(str (ns-name *ns*)) ~message
+          [~@args]))
 
 (defn file-exists?
   "Returns true if the file exists or false otherwise."
@@ -163,6 +177,6 @@
   ^String
   [data]
   (let [message-digest (MessageDigest/getInstance "SHA-256")
-        input (.getBytes (pr-str data) "UTF-8")]
+        input          (.getBytes (pr-str data) "UTF-8")]
     (.update message-digest input)
     (hex (.digest message-digest))))

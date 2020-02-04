@@ -7,11 +7,11 @@
 
 (def ^:private log-event-handler
   (misc/java-consumer
-   #(misc/log (.getLevel %) "jib" (.getMessage %))))
+   #(misc/log (.getLevel %) (.getMessage %))))
 
 (def ^:private progress-event-handler
   (misc/java-consumer (fn [^ProgressEvent progress-event]
-                        (misc/log :progress "jib" "%s (%.2f%%)"
+                        (misc/log :progress "%s (%.2f%%)"
                                   (.. progress-event getAllocation getDescription)
                                   (* (.. progress-event getAllocation getFractionOfRoot)
                                      (.getUnits progress-event)

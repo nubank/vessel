@@ -22,15 +22,16 @@
 
 (deftest ^:integration containerize-test
   (testing "calls Google Jib and containerize the files in question"
-    (jib/containerize #:image{:from
-                              #:image{:repository "openjdk" :tag "alpine"}
-                              :name
-                              #:image{:repository "my-app" :tag "v1"}
-                              :layers
-                              [#:image.layer{:name "resources"
-                                             :files [#:image.layer{:source "test/resources/greeting/greeting.txt"
-                                                                   :target "/opt/app/WEB-INF/classes/greeting.txt"}]}]
-                              :tar-path tar-path})
+    (binding [misc/*verbose-logs* true]
+        (jib/containerize #:image{:from
+                                  #:image{:repository "openjdk" :tag "alpine"}
+                                  :name
+                                  #:image{:repository "my-app" :tag "v1"}
+                                  :layers
+                                  [#:image.layer{:name "resources"
+                                                 :files [#:image.layer{:source "test/resources/greeting/greeting.txt"
+                                                                       :target "/opt/app/WEB-INF/classes/greeting.txt"}]}]
+                                  :tar-path tar-path}))
 
     (is (true? (misc/file-exists? (io/file tar-path)))))
 

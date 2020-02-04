@@ -45,14 +45,14 @@
 
 (deftest duration->string-test
   (are [duration result] (= result (misc/duration->string duration))
-    (Duration/ZERO)   "0 milliseconds"
-    (Duration/ofMillis 1)    "1 millisecond"
-    (Duration/ofMillis 256) "256 milliseconds"
-    (Duration/ofMillis 1000)         "1 second"
-    (Duration/ofMillis 6537)     "6.54 seconds"
-    (Duration/ofMinutes 1)         "1 minute"
-    (Duration/ofMillis 63885)     "1.06 minutes"
-    (Duration/ofMinutes 4)        "4 minutes"))
+    (Duration/ZERO)           "0 milliseconds"
+    (Duration/ofMillis 1)     "1 millisecond"
+    (Duration/ofMillis 256)   "256 milliseconds"
+    (Duration/ofMillis 1000)  "1 second"
+    (Duration/ofMillis 6537)  "6.54 seconds"
+    (Duration/ofMinutes 1)    "1 minute"
+    (Duration/ofMillis 63885) "1.06 minutes"
+    (Duration/ofMinutes 4)    "4 minutes"))
 
 (deftest with-stderr-test
   (let [writer (StringWriter.)]
@@ -61,6 +61,40 @@
         (print "Error!"))
       (is (= "Error!"
              (str writer))))))
+
+(deftest log*-test
+  (testing "prints or omits the message depending on the value bound to
+  *verbose-logs* and the supplied log level"
+    (are [verbose? stream level result]
+         (= result
+            (let [writer (java.io.StringWriter.)]
+              (binding [misc/*verbose-logs* verbose?
+                        stream writer]
+                (misc/log* level "me" "Hello!")
+                (str writer))))
+      true  *out* :info  "INFO [me] Hello!\n"
+      true  *out* "info" "INFO [me] Hello!\n"
+      true  *out* :debug "DEBUG [me] Hello!\n"
+      true  *err* :error "ERROR [me] Hello!\n"
+      true  *err* :fatal "FATAL [me] Hello!\n"
+      false *out* :info  "Hello!\n"
+      false *err* :error "Hello!\n"
+      false *err* :fatal "Hello!\n"
+      false *out* :debug ""))
+
+  (testing "supports formatting through clojure.core/format"
+    (is (= "INFO [me] Hello John Doe!\n"
+           (with-out-str
+             (binding [misc/*verbose-logs* true]
+               (misc/log* :info "me" "Hello %s!" "John Doe")))))))
+
+(deftest log-test
+  (testing "shows the log message displaying the current namespace as the
+  emitter"
+    (is (= "INFO [vessel.misc-test] Hello John Doe!\n"
+           (with-out-str
+             (binding [misc/*verbose-logs* true]
+               (misc/log :info "Hello %s!" "John Doe")))))))
 
 (def cwd (io/file (.getCanonicalPath (io/file "."))))
 
@@ -100,6 +134,6 @@
 (deftest sha-256-test
   (is (= "d2cf1a50c1a07db39d8397d4815da14aa7c7230775bb3c94ea62c9855cf9488d"
          (misc/sha-256 {:image
-                        {:name "my-app"
+                        {:name     "my-app"
                          :registry "docker.io"
-                         :version "v1"}}))))
+                         :version  "v1"}}))))
