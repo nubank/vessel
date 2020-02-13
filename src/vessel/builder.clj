@@ -48,6 +48,14 @@
         (get namespaces (parent-ns ns))
         (throw (IllegalStateException. (str "Unknown source for .class file " class-file))))))
 
+(defn- rethrow-compilation-error
+  "Unwrap the actual compilation exception and rethrow it as an
+  ExceptionInfo that will be properly handled by Vessel."
+  [^Symbol main-class throwable]
+  (throw (ex-info (str "Failed to compile " main-class)
+                  #:vessel.error{:category :vessel/compilation-error
+                                 :throwable (ex-cause (ex-cause throwable))})))
+
 (defn- main-args
   "Returns a Java array containing the arguments to be passed to
   clojure.main/-main function."
@@ -59,7 +67,9 @@
                                            target-dir (pr-str main-class))])]))
 
 (defn- compile*
-  "Carries out the actual compilation of the main class."
+  "Compiles the main-class writing compiled .class files to target-dir.
+
+  Displays a spin animation during the process."
   [^Symbol main-class ^File target-dir classpath-files]
   (let [urls (into-array URL (map #(.toURL %) classpath-files))
         class-loader (URLClassLoader. urls (.. ClassLoader getSystemClassLoader getParent))
@@ -67,11 +77,16 @@
         main (.getDeclaredMethod clojure "main" (into-array Class  [(.getClass (make-array String 0))]))
         _ (misc/log :info "Compiling %s..." main-class)
         spin (spinner/create-and-start!)]
-    @(future
-       (binding [*out* (java.io.StringWriter.)]
-         (.. Thread currentThread (setContextClassLoader class-loader))
-         (.invoke main nil (main-args main-class target-dir))
-         (spinner/stop! spin)))))
+    (try
+      @(future
+         (binding [*out* (java.io.StringWriter.)]
+           (.. Thread currentThread (setContextClassLoader class-loader))
+           (.invoke main nil (main-args main-class target-dir))))
+      (catch Throwable t
+        (rethrow-compilation-error main-class t))
+      (finally
+        (spinner/stop! spin)
+        (println)))))
 
 (defn- find-namespaces
   "Returns all namespaces declared within the file (either a directory

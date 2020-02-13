@@ -2,6 +2,7 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as string]
             [clojure.test :refer :all]
+            [matcher-combinators.clj-test]
             [matcher-combinators.matchers :as m]
             [matcher-combinators.test :refer [match?]]
             [vessel.builder :as builder]
@@ -79,10 +80,10 @@
   (let [src (io/file "test/resources/my-app")
         target (io/file "target/tests/builder-test/build-app-test")
         classpath-files (set (map io/file (string/split (slurp (io/file src "classpath.txt")) #":")))
-        output (builder/build-app {:classpath-files classpath-files
-                                   :main-class 'my-app.server
-                                   :resource-paths #{(io/file src "resources")}
-                                   :target-dir target})]
+        options {:classpath-files classpath-files
+                 :resource-paths #{(io/file src "resources")}
+                 :target-dir target}
+        output (builder/build-app (assoc options                                    :main-class 'my-app.server))]
     (testing "the classes directory has the expected files and directories"
       (is (match? (m/in-any-order ["clojure"
                                    "META-INF"
@@ -104,4 +105,9 @@
     (testing "the output data contains a :app/lib key whose values match the
     existing files at the lib directory"
       (is (= (set (:app/lib output))
-             (set (misc/filter-files (file-seq (io/file target "WEB-INF/lib")))))))))
+             (set (misc/filter-files (file-seq (io/file target "WEB-INF/lib")))))))
+
+    (testing "throws an exception describing the underwing compilation error"
+      (is (thrown-match? clojure.lang.ExceptionInfo
+                         #:vessel.error{:category :vessel/compilation-error}
+                         (builder/build-app (assoc options :main-class 'my-app.compilation-error)))))))
