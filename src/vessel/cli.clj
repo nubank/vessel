@@ -124,8 +124,11 @@
   [program args]
   (try
     (run* program args)
-    (catch Exception e
-      (show-errors {:errors [(.getMessage e)]}))))
+    (catch Throwable t
+      (show-errors {:errors [(.getMessage t)]})
+      (when-let [cause (:vessel.error/throwable (ex-data t))]
+        (.printStackTrace cause))
+      1)))
 
 (defn- split-at-colon
   "Splits the input into two parts divided by the first colon.
