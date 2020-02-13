@@ -51,6 +51,11 @@
              :parse-fn io/file
              :validate cli/file-or-dir-must-exist
              :assoc-fn #(assoc %1 %2 (misc/read-json %3))]
+            ["-o" "--output PATH"
+             :id :tarball
+             :desc "path to save the tarball containing the built image"
+             :default (io/file "image.tar")
+             :parse-fn io/file]
             ["-p" "--project-root PATH"
              :id :project-root
              :desc "root dir of the Clojure project to be built"
@@ -69,11 +74,9 @@
              :parse-fn io/file
              :validate cli/file-or-dir-must-exist
              :assoc-fn cli/repeat-option]
-            ["-o" "--output PATH"
-             :id :tarball
-             :desc "path to save the tarball containing the built image"
-             :default (io/file "image.tar")
-             :parse-fn io/file]]}
+            ["-v" "--verbose"
+             :id :verbose?
+             :desc "Show verbose messages"]]}
 
     "image"
     {:desc "Generate an image manifest, optionally by extending a base image and/or merging other manifests"

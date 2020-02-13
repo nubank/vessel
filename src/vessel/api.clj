@@ -19,12 +19,13 @@
 
 (defn containerize
   "Containerize a Clojure application."
-  [options]
-  (with-elapsed-time
-    (let [opts (assoc options :target-dir (misc/make-empty-dir ".vessel"))]
-      (-> (builder/build-app opts)
-          (image/render-image-spec opts)
-          jib/containerize))))
+  [{:keys [verbose?] :as options}]
+  (binding [misc/*verbose-logs* verbose?]
+    (with-elapsed-time
+      (let [opts (assoc options :target-dir (misc/make-empty-dir ".vessel"))]
+        (-> (builder/build-app opts)
+            (image/render-image-spec opts)
+            jib/containerize)))))
 
 (defn- write-manifest
   "Writes the manifest to the output as a JSON object."
