@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
+
 set -euo pipefail
 
-classes_dir=target/classes
+cur_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" > /dev/null && pwd )"
+
+version=$1
+
+classes_dir=$cur_dir/../target/classes
 
 echo "Cleaning classes directory..."
 
@@ -27,8 +32,8 @@ done
 
 echo "Generating uberjar..."
 
-jar -cvfe vessel.jar vessel.program .
+jar -cvfe vessel-$version.jar vessel.program .
 
-cd ..; mv classes/vessel.jar .
+cd ..; mv classes/vessel-$version.jar .
 
 echo "Created " $(ls *.jar)
