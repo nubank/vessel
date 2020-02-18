@@ -27,4 +27,4 @@ test:
 	@./build/test.sh
 
 release: clean
-	@./build/release.sh $(version)
+	@./build/release.sh $(VERSION)
