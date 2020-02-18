@@ -56,8 +56,8 @@ function create_release() {
     hub release create $version \
         --message "Vessel $version" \
         --message "A comprehensive changelog can be found at: https://github.com/nubank/vessel/blob/${version}/CHANGELOG.md" \
-        --attach linux-installer-${version}.sh#"Linux installer" \
-        --attach vessel-${version}.tar.gz#"Vessel archives"
+        --attach $dist/linux-installer-${version}.sh#"Linux installer" \
+        --attach $dist/vessel-${version}.tar.gz#"Vessel archives"
 }
 
 dirty=$(git status --porcelain)
