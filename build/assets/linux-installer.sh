@@ -58,7 +58,7 @@ echo "Installing Vessel $version"
 
 try mkdir -p $VESSEL_INSTALL
 
-try curl --output $vessel https://github.com/nubank/vessel/releases/download/${version}/linux-installer-${version}.sh
+try curl --Location --output $vessel https://github.com/nubank/vessel/releases/download/${version}/linux-installer-${version}.sh
 
 try tar -xvf $vessel -C $VESSEL_INSTALL
 
