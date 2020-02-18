@@ -45,7 +45,7 @@ function try() {
 
 if [ ! $(whoami) == "root" ]
 then
-    die "Error: this installer must be run as root\nPlease, re-run the script as root using sudo"
+    die "this installer must be run as root\nPlease, re-run the script as root using sudo"
 fi
 
 echo "Evaluating preconditions..."
