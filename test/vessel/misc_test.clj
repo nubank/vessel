@@ -6,7 +6,9 @@
             [clojure.test.check.properties :as prop]
             [vessel.misc :as misc]
             [vessel.test-helpers :refer [ensure-clean-test-dir]])
-  (:import [java.io StringReader StringWriter]
+  (:import com.google.cloud.tools.jib.api.AbsoluteUnixPath
+           [java.io StringReader StringWriter]
+           java.nio.file.Path
            [java.time Duration Instant]
            java.util.function.Consumer))
 
@@ -26,6 +28,12 @@
   (is (= {:a 1}
          (misc/assoc-some {}
                           :a 1 :b nil))))
+
+(deftest string->java-path-test
+  (is (instance? Path (misc/string->java-path "/"))))
+
+(deftest string->absolute-unix-path-test
+  (is (instance? AbsoluteUnixPath (misc/string->absolute-unix-path "/"))))
 
 (deftest java-consumer-test
   (is (instance? Consumer
@@ -66,12 +74,12 @@
   (testing "prints or omits the message depending on the value bound to
   *verbose-logs* and the supplied log level"
     (are [verbose? stream level result]
-        (= result
-           (let [writer (java.io.StringWriter.)]
-             (binding [misc/*verbose-logs* verbose?
-                       stream writer]
-               (misc/log* level "me" "Hello!")
-               (str writer))))
+         (= result
+            (let [writer (java.io.StringWriter.)]
+              (binding [misc/*verbose-logs* verbose?
+                        stream writer]
+                (misc/log* level "me" "Hello!")
+                (str writer))))
       true  *out* :info  "INFO [me] Hello!\n"
       true  *out* "info" "INFO [me] Hello!\n"
       true  *out* :debug "DEBUG [me] Hello!\n"
