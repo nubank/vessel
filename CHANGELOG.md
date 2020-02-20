@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.1.90] - 2020-02-20
+
 ### Added
 * Set the directory for caching base image and application layers to
   ~/.vessel-cache. Eventually, Vessel can take this directory as a parameter to
