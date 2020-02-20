@@ -27,12 +27,18 @@
   to a given tarball."
   [{:image/keys [name tar-path]}]
   {:pre [name tar-path]}
-  (.. Containerizer
-      (to (.. TarImage (at (misc/string->java-path tar-path))
-              (named (make-image-reference name))))
-      (setToolName "vessel")
-      (addEventHandler LogEvent log-event-handler)
-      (addEventHandler ProgressEvent progress-event-handler)))
+  (let [cache-dir (-> (misc/home-dir)
+                      (misc/make-dir ".vessel-cache")
+                      str
+                      misc/string->java-path)]
+    (.. Containerizer
+        (to (.. TarImage (at (misc/string->java-path tar-path))
+                (named (make-image-reference name))))
+        (setBaseImageLayersCache cache-dir)
+        (setApplicationLayersCache cache-dir)
+        (setToolName "vessel")
+        (addEventHandler LogEvent log-event-handler)
+        (addEventHandler ProgressEvent progress-event-handler))))
 
 (defn- containerize*
   [^JibContainerBuilder container-builder image-spec]
@@ -42,7 +48,7 @@
   "Makes a LayerConfiguration object from the supplied data structure."
   [{:image.layer/keys [name files]}]
   (loop [^LayerConfiguration$Builder layer (.. LayerConfiguration builder (setName name))
-         files files]
+         files                             files]
     (if-not (seq files)
       (.build layer)
       (let [{:image.layer/keys [source target]} (first files)]
