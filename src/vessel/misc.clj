@@ -117,6 +117,12 @@
   [fs]
   (filter #(.isFile %) fs))
 
+(defn ^File home-dir
+  "Returns a file object representing the home directory of the current
+  user."
+  []
+  (io/file (System/getProperty "user.home")))
+
 (defn ^File make-dir
   "Creates the directory in question and all of its parents.
 

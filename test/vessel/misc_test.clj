@@ -6,7 +6,9 @@
             [clojure.test.check.properties :as prop]
             [vessel.misc :as misc]
             [vessel.test-helpers :refer [ensure-clean-test-dir]])
-  (:import [java.io StringReader StringWriter]
+  (:import com.google.cloud.tools.jib.api.AbsoluteUnixPath
+           [java.io StringReader StringWriter]
+           java.nio.file.Path
            [java.time Duration Instant]
            java.util.function.Consumer))
 
@@ -26,6 +28,12 @@
   (is (= {:a 1}
          (misc/assoc-some {}
                           :a 1 :b nil))))
+
+(deftest string->java-path-test
+  (is (instance? Path (misc/string->java-path "/"))))
+
+(deftest string->absolute-unix-path-test
+  (is (instance? AbsoluteUnixPath (misc/string->absolute-unix-path "/"))))
 
 (deftest java-consumer-test
   (is (instance? Consumer
@@ -101,6 +109,9 @@
 (deftest filter-files-test
   (is (every? #(.isFile %)
               (misc/filter-files (file-seq cwd)))))
+
+(deftest home-dir-test
+  (is (true? (misc/file-exists? (misc/home-dir)))))
 
 (deftest make-dir-test
   (let [dir (misc/make-dir (io/file "target") "tests" "misc-test" "dir1" "dir2")]
