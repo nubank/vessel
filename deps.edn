@@ -6,7 +6,8 @@
   org.clojure/tools.cli #:mvn{:version "0.4.2"}
   org.clojure/tools.namespace #:mvn{:version "0.3.1"}
   com.google.cloud.tools/jib-core #:mvn{:version "0.13.0"}
-  clj-commons/spinner #:mvn{:version "0.6.0"}}
+  clj-commons/spinner #:mvn{:version "0.6.0"}
+  progrock #:mvn{:version "0.1.2"}}
  :aliases
  {:dev
   {:extra-paths ["dev/resources" "test"]
@@ -15,5 +16,6 @@
     {:git/url "https://github.com/cognitect-labs/test-runner.git"
      :sha "cb96e80f6f3d3b307c59cbeb49bb0dcb3a2a780b"}
     org.clojure/test.check #:mvn{:version "0.10.0-RC1"}
+    mockfn #:mvn{:version "0.5.0"}
     org.apache.commons/commons-vfs2 #:mvn{:version "2.4.1"}
     nubank/matcher-combinators #:mvn{:version "1.2.5"}}}}}

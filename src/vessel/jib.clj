@@ -1,15 +1,15 @@
 (ns vessel.jib
   "Clojure wrapper for Google Jib."
   (:require [vessel.misc :as misc])
-  (:import [com.google.cloud.tools.jib.api Containerizer ImageReference Jib JibContainerBuilder LayerConfiguration LayerConfiguration$Builder LogEvent RegistryImage TarImage]
+  (:import [com.google.cloud.tools.jib.api Containerizer ImageFormat ImageReference Jib JibContainerBuilder LayerConfiguration LayerConfiguration$Builder LogEvent RegistryImage TarImage]
            com.google.cloud.tools.jib.event.events.ProgressEvent
            com.google.cloud.tools.jib.frontend.CredentialRetrieverFactory))
 
-(def ^:private log-event-handler
+(def log-event-handler
   (misc/java-consumer
    #(misc/log (.getLevel %) (.getMessage %))))
 
-(def ^:private progress-event-handler
+(def  progress-event-handler
   (misc/java-consumer (fn [^ProgressEvent progress-event]
                         (misc/log :progress "%s (%.2f%%)"
                                   (.. progress-event getAllocation getDescription)
@@ -17,7 +17,7 @@
                                      (.getUnits progress-event)
                                      100)))))
 
-(defn-   ^ImageReference make-image-reference
+(defn   ^ImageReference make-image-reference
   "Returns a new image reference from the provided values."
   [{:image/keys [^String registry ^String repository ^String tag]}]
   (ImageReference/of registry repository tag))
@@ -90,7 +90,8 @@
              (if (is-in-docker-hub? reference)
                (str reference)
                (make-registry-image reference)))
-        (setCreationTime (misc/now)))))
+        (setCreationTime (misc/now))
+        (setFormat ImageFormat/Docker))))
 
 (defn containerize
   "Given an image spec, containerize the application in question by
