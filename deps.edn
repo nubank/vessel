@@ -1,11 +1,12 @@
 {:paths ["src" "resources"]
  :deps
  {org.clojure/clojure #:mvn{:version "1.10.0"}
+  org.clojure/core.async #:mvn{:version "1.0.567"}
   org.clojure/data.json #:mvn{:version "0.2.6"}
   org.clojure/tools.cli #:mvn{:version "0.4.2"}
   org.clojure/tools.namespace #:mvn{:version "0.3.1"}
   com.google.cloud.tools/jib-core #:mvn{:version "0.13.0"}
-  clj-commons/spinner {:mvn/version "0.6.0"}}
+  clj-commons/spinner #:mvn{:version "0.6.0"}}
  :aliases
  {:dev
   {:extra-paths ["dev/resources" "test"]
