@@ -3,8 +3,8 @@
             [clojure.java.io :as io]
             [vessel.builder :as builder]
             [vessel.image :as image]
-            [vessel.jib :as jib]
-            [vessel.jib.pusher :as pusher]
+            [vessel.jib.containerizer :as jib.containerizer]
+            [vessel.jib.pusher :as jib.pusher]
             [vessel.misc :as misc])
   (:import java.io.Writer))
 
@@ -30,7 +30,7 @@
       (let [opts (assoc options :target-dir (misc/make-empty-dir vessel-dir))]
         (-> (builder/build-app opts)
             (image/render-image-spec opts)
-            jib/containerize)))))
+            jib.containerizer/containerize)))))
 
 (defn- write-manifest
   "Writes the manifest to the output as a JSON object."
@@ -60,5 +60,5 @@
   [{:keys [verbose-logs?] :as options}]
   (binding [misc/*verbose-logs* verbose-logs?]
     (with-elapsed-time "Successfully pushed in"
-      (pusher/push
+      (jib.pusher/push
        (assoc options :temp-dir (misc/make-empty-dir vessel-dir))))))

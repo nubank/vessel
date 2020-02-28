@@ -4,6 +4,7 @@
             [clojure.test :refer :all]
             [mockfn.macros :refer [calling providing verifying]]
             [mockfn.matchers :refer [a any exactly pred]]
+            [vessel.jib.helpers :as jib.helpers]
             [vessel.jib.pusher :as pusher]
             [vessel.test-helpers :refer [ensure-clean-test-dir]])
   (:import [com.google.cloud.tools.jib.api Credential CredentialRetriever DescriptorDigest ImageReference]
@@ -22,14 +23,14 @@
 (deftest make-registry-client-test
   (testing "by default, attempts to retrieve credentials and to authenticate on
   the registry"
-    (verifying [(pusher/make-docker-config-retriever (a ImageReference)) credential-retriever (exactly 1)
+    (verifying [(jib.helpers/make-docker-config-retriever (a ImageReference)) credential-retriever (exactly 1)
                 (pusher/authenticate (a RegistryClient)) any (exactly 1)]
                (is (instance? RegistryClient
                               (pusher/make-registry-client (ImageReference/parse "library/my-app:v1") {})))))
 
   (testing "when :anonymous? is set to true, neither attempts to retrieve
   credentials nor to authenticate on the registry"
-    (verifying [(pusher/make-docker-config-retriever (a ImageReference)) any (exactly 0)
+    (verifying [(jib.helpers/make-docker-config-retriever (a ImageReference)) any (exactly 0)
                 (pusher/authenticate (a RegistryClient)) any (exactly 0)]
                (is (instance? RegistryClient
                               (pusher/make-registry-client (ImageReference/parse "library/my-app:v1") {:anonymous? true}))))))
@@ -76,7 +77,7 @@
 
     (testing "ensures that all steps needed to push an image are being performed
   accordingly"
-      (let [            ^DescriptorDigest image-digest (DescriptorDigest/fromDigest "sha256:ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356")]
+      (let [^DescriptorDigest image-digest (DescriptorDigest/fromDigest "sha256:ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356")]
         (providing [(jib.helpers/make-docker-config-retriever (a ImageReference)) credential-retriever
                     (pusher/authenticate (a RegistryClient)) any
                     (#'pusher/check-blob (a RegistryClient) layer1-digest) true

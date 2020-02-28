@@ -3,18 +3,16 @@
   (:require [clojure.core.async :as async :refer [<! <!! >!!]]
             [clojure.java.io :as io]
             [progrock.core :as progrock]
-            [vessel.jib :as jib]
+            [vessel.jib.helpers :as jib.helpers]
             [vessel.misc :as misc])
-  (:import [com.google.cloud.tools.jib.api CredentialRetriever DescriptorDigest ImageReference LogEvent]
+  (:import [com.google.cloud.tools.jib.api DescriptorDigest ImageReference LogEvent]
            [com.google.cloud.tools.jib.blob Blob BlobDescriptor Blobs]
            com.google.cloud.tools.jib.event.EventHandlers
            com.google.cloud.tools.jib.event.events.ProgressEvent
-           com.google.cloud.tools.jib.frontend.CredentialRetrieverFactory
            com.google.cloud.tools.jib.hash.Digests
            com.google.cloud.tools.jib.http.FailoverHttpClient
            [com.google.cloud.tools.jib.image.json BuildableManifestTemplate V22ManifestTemplate]
            com.google.cloud.tools.jib.registry.RegistryClient
-           com.google.cloud.tools.jib.tar.TarExtractor
            java.io.File))
 
 (defn- show-progress
@@ -35,28 +33,21 @@
           (recur (show-progress (progrock/tick progress-bar value))))))
     channel))
 
-(defn ^CredentialRetriever make-docker-config-retriever
-  "Returns an instance of a CredentialRetriever for retrieving
-  credentials from Docker config."
-  [^ImageReference image-reference]
-  (.. CredentialRetrieverFactory
-      (forImage image-reference jib/log-event-handler)
-      dockerConfig))
-
-(defn- ^EventHandlers make-event-handlers
-  "Returns an instance of EventHandlers containing handlers for log and
-  progress events."
-  []
-  (.. EventHandlers builder
-      (add LogEvent jib/log-event-handler)
-      (add ProgressEvent jib/progress-event-handler)
-      build))
-
 (defn authenticate
   "Authenticates the client on the registry."
   [^RegistryClient client]
   (when-not (.doPushBearerAuth client)
     (.configureBasicAuth client)))
+
+(defn- ^EventHandlers make-event-handlers
+  "Returns an instance of EventHandlers containing handlers for log and
+  progress events."
+  []
+  (let [handler-name "vessel.jib.pusher"]
+    (.. EventHandlers builder
+        (add LogEvent (jib.helpers/log-event-handler handler-name))
+        (add ProgressEvent (jib.helpers/progress-event-handler handler-name))
+        build)))
 
 (defn ^RegistryClient make-registry-client
   "Given an image reference, returns a registry client object capable of
@@ -66,8 +57,8 @@
                                            anonymous?                 false}}]
   (let [^Credential credential
         (when-not anonymous?
-          (.. (make-docker-config-retriever image-reference) retrieve get))
-        ^FailoverHttpClient http-client (FailoverHttpClient. allow-insecure-registries? (not anonymous?) jib/log-event-handler)
+          (.. (jib.helpers/make-docker-config-retriever image-reference) retrieve get))
+        ^FailoverHttpClient http-client (FailoverHttpClient. allow-insecure-registries? (not anonymous?) (jib.helpers/log-event-handler "vessel.jib.pusher"))
         ^EventHandlers event-handlers   (make-event-handlers)
         ^RegistryClient client
         (-> (RegistryClient/factory event-handlers (.getRegistry image-reference) (.getRepository image-reference) http-client)
@@ -237,7 +228,7 @@
   false."
   [{:keys [tarball temp-dir] :as options}]
   {:pre [tarball temp-dir]}
-  (let [_                                 (extract-tarball tarball temp-dir)
+  (let [_                                 (jib.helpers/extract-tarball tarball temp-dir)
         {:keys [config repoTags layers]}
         (read-image-manifest temp-dir)
         ^ImageReference image-reference   (ImageReference/parse (first repoTags))

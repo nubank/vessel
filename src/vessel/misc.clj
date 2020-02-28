@@ -3,8 +3,7 @@
             [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as string])
-  (:import com.google.cloud.tools.jib.api.AbsoluteUnixPath
-           java.io.File
+  (:import java.io.File
            [java.nio.file Path Paths]
            java.security.MessageDigest
            java.text.DecimalFormat
@@ -28,10 +27,6 @@
 (defn  ^Path string->java-path
   [^String path]
   (Paths/get path (into-array String [])))
-
-(defn ^AbsoluteUnixPath string->absolute-unix-path
-  [^String path]
-  (AbsoluteUnixPath/get path))
 
 (defn   ^Consumer java-consumer
   "Returns a java.util.function.Consumer instance that calls the function f.
