@@ -1,28 +1,33 @@
 (ns vessel.api
   (:require [clojure.data.json :as json]
+            [clojure.java.io :as io]
             [vessel.builder :as builder]
             [vessel.image :as image]
             [vessel.jib :as jib]
+            [vessel.jib.pusher :as pusher]
             [vessel.misc :as misc])
   (:import java.io.Writer))
+
+(def vessel-dir (io/file ".vessel"))
 
 (defmacro ^:private with-elapsed-time
   "Evaluates body and shows a log message by displaying the elapsed time in the process.
 
   Returns whatever body yelds."
-  [& body]
+  [^String message & body]
   `(let [start#  (misc/now)
          result# (do ~@body)]
-     (misc/log :info "Successfully containerized in %s"
+     (misc/log :info "%s %s"
+               ~message
                (misc/duration->string (misc/duration-between start# (misc/now))))
      result#))
 
 (defn containerize
-  "Containerize a Clojure application."
+  "Containerizes a Clojure application."
   [{:keys [verbose?] :as options}]
   (binding [misc/*verbose-logs* verbose?]
-    (with-elapsed-time
-      (let [opts (assoc options :target-dir (misc/make-empty-dir ".vessel"))]
+    (with-elapsed-time "Successfully containerized in"
+      (let [opts (assoc options :target-dir (misc/make-empty-dir vessel-dir))]
         (-> (builder/build-app opts)
             (image/render-image-spec opts)
             jib/containerize)))))
@@ -49,3 +54,11 @@
                            (merge-all manifests))
         image-tag      (or tag (misc/sha-256 image-manifest))]
     (write-manifest output (assoc-in image-manifest [:image :tag] image-tag))))
+
+(defn push
+  "Pushes a tarball to a registry."
+  [{:keys [verbose-logs?] :as options}]
+  (binding [misc/*verbose-logs* verbose-logs?]
+    (with-elapsed-time "Successfully pushed in"
+      (pusher/push
+       (assoc options :temp-dir (misc/make-empty-dir vessel-dir))))))
