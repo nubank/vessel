@@ -25,5 +25,8 @@ clean:
 unit-test:
 	@./build/test.sh -d test/unit
 
+integration-test:
+	@./build/test.sh -d test/integration
+
 release: clean
 	@./build/release.sh $(VERSION)
