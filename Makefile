@@ -15,7 +15,6 @@
 VERSION = $(shell cat version-prefix.txt).$(shell git rev-list --count master)
 
 .PHONY: build
-.PHONY: test
 
 build:
 	@./build/uberjar.sh $(VERSION)
@@ -23,8 +22,8 @@ build:
 clean:
 	@rm -rf target
 
-test:
-	@./build/test.sh
+unit-test:
+	@./build/test.sh -d test/unit
 
 release: clean
 	@./build/release.sh $(VERSION)
