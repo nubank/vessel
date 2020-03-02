@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.99] - 2020-03-02
+
 ### Added
 * Push command to upload a tarball to a registry.
 
