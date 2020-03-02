@@ -6,8 +6,7 @@
             [clojure.test.check.properties :as prop]
             [vessel.misc :as misc]
             [vessel.test-helpers :refer [ensure-clean-test-dir]])
-  (:import com.google.cloud.tools.jib.api.AbsoluteUnixPath
-           [java.io StringReader StringWriter]
+  (:import [java.io StringReader StringWriter]
            java.nio.file.Path
            [java.time Duration Instant]
            java.util.function.Consumer))
@@ -31,9 +30,6 @@
 
 (deftest string->java-path-test
   (is (instance? Path (misc/string->java-path "/"))))
-
-(deftest string->absolute-unix-path-test
-  (is (instance? AbsoluteUnixPath (misc/string->absolute-unix-path "/"))))
 
 (deftest java-consumer-test
   (is (instance? Consumer

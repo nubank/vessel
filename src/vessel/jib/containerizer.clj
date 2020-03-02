@@ -1,23 +1,11 @@
-(ns vessel.jib
-  "Clojure wrapper for Google Jib."
-  (:require [vessel.misc :as misc])
-  (:import [com.google.cloud.tools.jib.api Containerizer ImageReference Jib JibContainerBuilder LayerConfiguration LayerConfiguration$Builder LogEvent RegistryImage TarImage]
-           com.google.cloud.tools.jib.event.events.ProgressEvent
-           com.google.cloud.tools.jib.frontend.CredentialRetrieverFactory))
+(ns vessel.jib.containerizer
+  "Containerization API built on top of Google Jib."
+  (:require [vessel.jib.helpers :as jib.helpers]
+            [vessel.misc :as misc])
+  (:import [com.google.cloud.tools.jib.api Containerizer ImageFormat ImageReference Jib JibContainerBuilder LayerConfiguration LayerConfiguration$Builder LogEvent RegistryImage TarImage]
+           com.google.cloud.tools.jib.event.events.ProgressEvent))
 
-(def ^:private log-event-handler
-  (misc/java-consumer
-   #(misc/log (.getLevel %) (.getMessage %))))
-
-(def ^:private progress-event-handler
-  (misc/java-consumer (fn [^ProgressEvent progress-event]
-                        (misc/log :progress "%s (%.2f%%)"
-                                  (.. progress-event getAllocation getDescription)
-                                  (* (.. progress-event getAllocation getFractionOfRoot)
-                                     (.getUnits progress-event)
-                                     100)))))
-
-(defn-   ^ImageReference make-image-reference
+(defn   ^ImageReference make-image-reference
   "Returns a new image reference from the provided values."
   [{:image/keys [^String registry ^String repository ^String tag]}]
   (ImageReference/of registry repository tag))
@@ -27,18 +15,19 @@
   to a given tarball."
   [{:image/keys [name tar-path]}]
   {:pre [name tar-path]}
-  (let [cache-dir (-> (misc/home-dir)
-                      (misc/make-dir ".vessel-cache")
-                      str
-                      misc/string->java-path)]
+  (let [cache-dir    (-> (misc/home-dir)
+                         (misc/make-dir ".vessel-cache")
+                         str
+                         misc/string->java-path)
+        handler-name "vessel.jib.containerizer"]
     (.. Containerizer
         (to (.. TarImage (at (misc/string->java-path tar-path))
                 (named (make-image-reference name))))
         (setBaseImageLayersCache cache-dir)
         (setApplicationLayersCache cache-dir)
         (setToolName "vessel")
-        (addEventHandler LogEvent log-event-handler)
-        (addEventHandler ProgressEvent progress-event-handler))))
+        (addEventHandler LogEvent (jib.helpers/log-event-handler handler-name))
+        (addEventHandler ProgressEvent (jib.helpers/progress-event-handler handler-name)))))
 
 (defn- containerize*
   [^JibContainerBuilder container-builder image-spec]
@@ -52,7 +41,7 @@
     (if-not (seq files)
       (.build layer)
       (let [{:image.layer/keys [source target]} (first files)]
-        (.addEntry layer (misc/string->java-path source) (misc/string->absolute-unix-path target))
+        (.addEntry layer (misc/string->java-path source) (jib.helpers/string->absolute-unix-path target))
         (recur layer (rest files))))))
 
 (defn- ^JibContainerBuilder add-layers
@@ -67,8 +56,7 @@
   "Given an ImageReference instance, returns a new registry image
   object."
   [^ImageReference image-reference]
-  (let [retriever (.. CredentialRetrieverFactory (forImage image-reference log-event-handler)
-                      dockerConfig)]
+  (let [^CredentialRetriever retriever (jib.helpers/make-docker-config-retriever image-reference)]
     (.. RegistryImage (named image-reference)
         (addCredentialRetriever retriever))))
 
@@ -90,11 +78,12 @@
              (if (is-in-docker-hub? reference)
                (str reference)
                (make-registry-image reference)))
-        (setCreationTime (misc/now)))))
+        (setCreationTime (misc/now))
+        (setFormat ImageFormat/Docker))))
 
 (defn containerize
   "Given an image spec, containerize the application in question by
-  producing a tarball with an OCI image."
+  producing a tarball containing image layers and metadata files."
   [{:image/keys [from layers] :as image-spec}]
   {:pre [from layers]}
   (-> (make-container-builder from)

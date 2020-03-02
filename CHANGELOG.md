@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+* Push command to upload a tarball to a registry.
+
+### Changed
+* Internal: rename vessel.jib namespace to vessel.jib.containerizer and move
+functions that deal with common aspects of Jib API to the new
+  vessel.jib.helpers namespace.
+* Upgrade Jib to version 0.13.0.
+
 ## [0.1.90] - 2020-02-20
 
 ### Added

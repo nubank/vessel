@@ -10,6 +10,10 @@
   "Current working directory."
   (.getCanonicalFile (io/file ".")))
 
+(def verbose ["-v" "--verbose"
+              :id :verbose?
+              :desc "Show verbose messages"])
+
 (defn- exit
   "Terminates the JVM with the status code."
   [status]
@@ -74,9 +78,7 @@
              :parse-fn io/file
              :validate cli/file-or-dir-must-exist
              :assoc-fn cli/repeat-option]
-            ["-v" "--verbose"
-             :id :verbose?
-             :desc "Show verbose messages"]]}
+            verbose]}
 
     "image"
     {:desc "Generate an image manifest, optionally by extending a base image and/or merging other manifests"
@@ -135,7 +137,23 @@
       ["-O" "--object OBJECT"
        :id :object
        :desc "Object under which attributes will be added"
-       :parse-fn keyword]]}}})
+       :parse-fn keyword]]}
+
+    "push"
+    {:desc "Push a tarball to a registry"
+     :fn   api/push
+     :opts [["-t" "--tarball PATH"
+             :id :tarball
+             :desc "Tar archive containing image layers and metadata files"
+             :parse-fn io/file
+             :validate cli/file-or-dir-must-exist]
+            ["-a" "--allow-insecure-registries"
+             :id :allow-insecure-registries?
+             :desc "Allow pushing images to insecure registries"]
+            ["-A" "--anonymous"
+             :id :anonymous?
+             :desc "Do not authenticate on the registry; push anonymously"]
+            verbose]}}})
 
 (defn -main
   [& args]
