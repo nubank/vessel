@@ -102,6 +102,10 @@
 
 (def cwd (io/file (.getCanonicalPath (io/file "."))))
 
+(deftest absolute?-test
+  (is (true? (misc/absolute? cwd)))
+  (is (false? (misc/absolute? (io/file "deps.edn")))))
+
 (deftest filter-files-test
   (is (every? #(.isFile %)
               (misc/filter-files (file-seq cwd)))))

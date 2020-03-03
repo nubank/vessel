@@ -101,6 +101,12 @@
           ~level ~(str (ns-name *ns*)) ~message
           [~@args]))
 
+(defn ^Boolean absolute?
+  "Returns true if the file or directory in question represents an
+  absolute path, or false otherwise."
+  [^File file-or-dir]
+  (.isAbsolute file-or-dir))
+
 (defn file-exists?
   "Returns true if the file exists or false otherwise."
   [^File file]
