@@ -81,6 +81,7 @@
         target (io/file "target/tests/builder-test/build-app-test")
         classpath-files (set (map io/file (string/split (slurp (io/file src "classpath.txt")) #":")))
         options {:classpath-files classpath-files
+                 :project-root src
                  :resource-paths #{(io/file src "resources")}
                  :target-dir target}
         output (builder/build-app (assoc options                                    :main-class 'my-app.server))]

@@ -199,6 +199,15 @@
          (mapcat #(map vector (remove nil? (copy-files* % classes-dir)) (repeat %)))
          (into {}))))
 
+(defn- ensure-absolute-file
+  "If file-or-dir represents an absolute path, returns it
+  unchanged. Otherwise, returns its absolute form by composing the
+  path in question with the supplied project-root."
+  [^File project-root ^File file-or-dir]
+  (if (misc/absolute? file-or-dir)
+    file-or-dir
+    (io/file project-root file-or-dir)))
+
 (defn build-app
   "Builds the Clojure application.
 
@@ -227,9 +236,10 @@
   on the classpath);
   * :app/lib - a sequence of java.io.File objects containing libraries
   that the application depends on."
-  [{:keys [classpath-files ^Symbol main-class resource-paths ^File target-dir]}]
-  {:pre [classpath-files main-class target-dir]}
+  [{:keys [classpath-files ^Symbol main-class ^File project-root resource-paths ^File target-dir]}]
+  {:pre [classpath-files main-class project-root target-dir]}
   (let [web-inf (misc/make-dir target-dir "WEB-INF")
+        classpath-files (set (map (partial ensure-absolute-file project-root) classpath-files))
         classes (compile classpath-files main-class web-inf)
         dirs+jar-files (set/union resource-paths (set (vals classes)))
         libs (misc/filter-files (set/difference classpath-files dirs+jar-files))
