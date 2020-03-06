@@ -126,6 +126,13 @@
       (is (true? (misc/file-exists? new-dir)))
       (is (empty? (.listFiles new-dir))))))
 
+(deftest posix-file-permissions-test
+  (is (= #{"OTHERS_READ"
+           "OWNER_WRITE"
+           "OWNER_READ"
+           "GROUP_READ"}
+         (misc/posix-file-permissions (io/file "deps.edn")))))
+
 (deftest relativize-test
   (is (= (io/file "deps.edn")
          (misc/relativize (io/file cwd "deps.edn") cwd))))
