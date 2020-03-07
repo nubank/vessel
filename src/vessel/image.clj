@@ -4,24 +4,30 @@
             [vessel.misc :as misc])
   (:import java.io.File))
 
-(defn- make-layers-for-extra-paths
+(defn- image-layers-for-extra-paths
   "Given a set of extra-paths (maps containing the keys :source, :target
   and :churn), returns a sequence of layers by grouping files
   according to their churn."
-  [extra-paths]
-  (->> extra-paths
-       (group-by :churn)
-       (map (fn [[churn files]]
-              #:image.layer{:files (map #(zipmap [:image.layer/source :image.layer/target] [(.getPath (:source %)) (.getPath (:target %))]) files)
-                            :churn churn}))
-       (sort-by :image.layer/churn)
-       (map-indexed (fn [index layer]
-                      (assoc layer :image.layer/name (str "extra-files-" (inc index)))))))
+  [{:keys [extra-paths preserve-file-permissions?]}]
+  (letfn [(layer-entry [{:keys [source target]}]
+            (misc/assoc-some #:layer.entry{:source            (.getPath source)
+                                           :target            (.getPath target)
+                                           :modification-time (misc/last-modified-time source)}
+                             :layer.entry/file-permissions (when preserve-file-permissions?
+                                                             (misc/posix-file-permissions source))))]
+    (->> extra-paths
+         (group-by :churn)
+         (map (fn [[churn files]]
+                #:image.layer{:entries (map layer-entry files)
+                              :churn   churn}))
+         (sort-by :image.layer/churn)
+         (map-indexed (fn [index layer]
+                        (assoc layer :image.layer/name (str "extra-files-" (inc index))))))))
 
 (defn- concat-with-extra-paths
-  [{:keys [extra-paths]} layers]
+  [{:keys [extra-paths] :as options} layers]
   (if (seq extra-paths)
-    (into (make-layers-for-extra-paths extra-paths) layers)
+    (into (image-layers-for-extra-paths options) layers)
     layers))
 
 (defn internal-dep?
@@ -58,7 +64,7 @@
   {"external-deps" [(constantly false) 1] ;; default layer
    "internal-deps" [internal-dep? 3]
    "resources"     [resource? 5]
-   "sources"  [source-file? 7]})
+   "sources"       [source-file? 7]})
 
 (defn- ^Boolean apply-classifier-predicate
   "Applies the predicate on the file or map entry (whose value is a
@@ -81,16 +87,19 @@
 
 (defn- image-layer
   "Creates an image layer map from the supplied arguments."
-  [[layer-name files] {:keys [app-root target-dir]}]
-  #:image.layer{:name  layer-name
-                :files (map (fn [file-or-map-entry]
-                              (let [^File file (if (map-entry? file-or-map-entry)
-                                                 (key file-or-map-entry)
-                                                 file-or-map-entry)]
-                                #:image.layer{:source (.getPath file)
-                                              :target (.getPath (io/file app-root (misc/relativize file target-dir)))}))
-                            files)
-                :churn (second (get classifiers layer-name))})
+  [[layer-name files] {:keys [app-root preserve-file-permissions? target-dir]}]
+  #:image.layer{:name    layer-name
+                :entries (map (fn [file-or-map-entry]
+                                (let [^File file (if (map-entry? file-or-map-entry)
+                                                   (key file-or-map-entry)
+                                                   file-or-map-entry)]
+                                  (misc/assoc-some #:layer.entry{:source            (.getPath file)
+                                                                 :target            (.getPath (io/file app-root (misc/relativize file target-dir)))
+                                                                 :modification-time (misc/last-modified-time file)}
+                                                   :layer.entry/file-permissions (when preserve-file-permissions?
+                                                                                   (misc/posix-file-permissions file)))))
+                              files)
+                :churn   (second (get classifiers layer-name))})
 
 (defn- layer-comparator
   "Compares two image layers."
