@@ -118,6 +118,11 @@
   []
   (io/file (System/getProperty "user.home")))
 
+(defn ^Instant last-modified-time
+  "Returns the file's last modified time as a java.time.Instant."
+  [^File file]
+  (.toInstant (Files/getLastModifiedTime (.toPath file) (make-array LinkOption 0))))
+
 (defn ^File make-dir
   "Creates the directory in question and all of its parents.
 

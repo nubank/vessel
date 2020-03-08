@@ -109,6 +109,10 @@
 (deftest home-dir-test
   (is (true? (misc/file-exists? (misc/home-dir)))))
 
+(deftest last-modified-time-test
+  (is (instance? Instant
+                 (misc/last-modified-time (io/file "deps.edn")))))
+
 (deftest make-dir-test
   (let [dir (misc/make-dir (io/file "target") "tests" "misc-test" "dir1" "dir2")]
     (is (true? (misc/file-exists? dir)))))
