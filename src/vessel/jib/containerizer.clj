@@ -2,8 +2,9 @@
   "Containerization API built on top of Google Jib."
   (:require [vessel.jib.helpers :as jib.helpers]
             [vessel.misc :as misc])
-  (:import [com.google.cloud.tools.jib.api Containerizer ImageFormat ImageReference Jib JibContainerBuilder LayerConfiguration LayerConfiguration$Builder LogEvent RegistryImage TarImage]
-           com.google.cloud.tools.jib.event.events.ProgressEvent))
+  (:import [com.google.cloud.tools.jib.api Containerizer FilePermissions ImageFormat ImageReference Jib JibContainerBuilder LayerConfiguration LayerConfiguration$Builder LayerEntry LogEvent RegistryImage TarImage]
+           com.google.cloud.tools.jib.event.events.ProgressEvent
+           java.nio.file.attribute.PosixFilePermission))
 
 (defn   ^ImageReference make-image-reference
   "Returns a new image reference from the provided values."
@@ -33,16 +34,28 @@
   [^JibContainerBuilder container-builder image-spec]
   (.containerize container-builder (make-containerizer image-spec)))
 
+(defn- ^LayerEntry make-layer-entry
+  "Creates a new LayerEntry object from the supplied values."
+  [{:layer.entry/keys [source target file-permissions modification-time]}]
+  (let [permissions (some->> file-permissions
+                             (map #(PosixFilePermission/valueOf %))
+                             set
+                             (FilePermissions/fromPosixFilePermissions))]
+    (LayerEntry. (misc/string->java-path source)
+                 (jib.helpers/string->absolute-unix-path target)
+                 (or permissions FilePermissions/DEFAULT_FILE_PERMISSIONS)
+                 modification-time)))
+
 (defn- ^LayerConfiguration make-layer-configuration
   "Makes a LayerConfiguration object from the supplied data structure."
-  [{:image.layer/keys [name files]}]
+  [{:image.layer/keys [name entries]}]
   (loop [^LayerConfiguration$Builder layer (.. LayerConfiguration builder (setName name))
-         files                             files]
-    (if-not (seq files)
+         entries                           entries]
+    (if-not (seq entries)
       (.build layer)
-      (let [{:image.layer/keys [source target]} (first files)]
-        (.addEntry layer (misc/string->java-path source) (jib.helpers/string->absolute-unix-path target))
-        (recur layer (rest files))))))
+      (let [layer-entry (first entries)]
+        (.addEntry layer (make-layer-entry layer-entry))
+        (recur layer (rest entries))))))
 
 (defn- ^JibContainerBuilder add-layers
   "Adds the supplied layers to the JibContainerBuilder object as a set

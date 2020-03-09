@@ -66,6 +66,9 @@
              :default cwd
              :parse-fn io/file
              :validate cli/file-or-dir-must-exist]
+            ["-P" "--preserve-file-permissions"
+             :id :preserve-file-permissions?
+             :desc "Preserve original file permissions when copying files to the container. If not enabled, the default permissions for files are 644"]
             ["-s" "--source-path PATH"
              :id :source-paths
              :desc "Directories containing source files. This option can be repeated many times"

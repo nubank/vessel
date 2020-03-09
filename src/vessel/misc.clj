@@ -4,7 +4,7 @@
             [clojure.java.io :as io]
             [clojure.string :as string])
   (:import java.io.File
-           [java.nio.file Path Paths]
+           [java.nio.file Files LinkOption Path Paths]
            java.security.MessageDigest
            java.text.DecimalFormat
            [java.time Duration Instant]
@@ -124,6 +124,11 @@
   []
   (io/file (System/getProperty "user.home")))
 
+(defn ^Instant last-modified-time
+  "Returns the file's last modified time as a java.time.Instant."
+  [^File file]
+  (.toInstant (Files/getLastModifiedTime (.toPath file) (make-array LinkOption 0))))
+
 (defn ^File make-dir
   "Creates the directory in question and all of its parents.
 
@@ -148,6 +153,14 @@
     (when (file-exists? dir)
       (run! #(io/delete-file %) (reverse (file-seq dir))))
     (make-dir dir)))
+
+(defn posix-file-permissions
+  "Returns a set containing posix file permissions for the supplied
+  file."
+  [^File file]
+  (->> (Files/getPosixFilePermissions (.toPath file)        (make-array LinkOption 0))
+       (map str)
+       set))
 
 (defn ^File relativize
   "Given a file and a base directory, returns a new file representing

@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.107] - 2020-03-09
+
+### Added
+- Added the `--preserve-file-permissions` flag to the `containerize` command. By
+  default, files are copied to the container with the permissions 644. When this
+  flag is enabled, Vessel copies files with their original permissions. This
+  feature is useful, for instance, to keep executable scripts (e.g. wrappers for
+  calling the java command) with their original permissions within the
+  container.
+
+## [0.2.99] - 2020-03-02
+
 ### Added
 * Push command to upload a tarball to a registry.
 
