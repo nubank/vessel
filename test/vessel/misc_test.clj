@@ -109,6 +109,10 @@
 (deftest home-dir-test
   (is (true? (misc/file-exists? (misc/home-dir)))))
 
+(deftest last-modified-time-test
+  (is (instance? Instant
+                 (misc/last-modified-time (io/file "deps.edn")))))
+
 (deftest make-dir-test
   (let [dir (misc/make-dir (io/file "target") "tests" "misc-test" "dir1" "dir2")]
     (is (true? (misc/file-exists? dir)))))
@@ -125,6 +129,13 @@
           new-dir (misc/make-empty-dir old-dir)]
       (is (true? (misc/file-exists? new-dir)))
       (is (empty? (.listFiles new-dir))))))
+
+(deftest posix-file-permissions-test
+  (is (= #{"OTHERS_READ"
+           "OWNER_WRITE"
+           "OWNER_READ"
+           "GROUP_READ"}
+         (misc/posix-file-permissions (io/file "deps.edn")))))
 
 (deftest relativize-test
   (is (= (io/file "deps.edn")
