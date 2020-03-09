@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.107] - 2020-03-09
+
 ### Added
 - Added the `--preserve-file-permissions` flag to the `containerize` command. By
   default, files are copied to the container with the permissions 644. When this
