@@ -1,5 +1,6 @@
 (ns vessel.test-helpers
-  (:require [clojure.java.shell :as shell]
+  (:require [clojure.java.io :as io]
+            [clojure.java.shell :as shell]
             [clojure.string :as string]
             [vessel.misc :as misc])
   (:import java.io.File))
@@ -24,6 +25,11 @@
                   :dir working-dir
                   :env (into {} (System/getenv)))]
     (if (zero? exit)
-      out
+      (->> (string/split out #":")
+           (map (fn [path]
+                  (if (.isAbsolute (io/file path))
+                    path
+                    (str (io/file (.getAbsoluteFile working-dir) path)))))
+           (string/join ":"))
       (throw (ex-info "clojure -Spath failed"
                       {:process-output err})))))
