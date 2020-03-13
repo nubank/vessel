@@ -1,16 +1,24 @@
 (ns vessel.program-integration-test
   (:require [clojure.java.io :as io]
             [clojure.test :refer :all]
+            [matcher-combinators.test :refer [match?]]
             [mockfn.macros :refer [calling providing]]
             [vessel.misc :as misc]
             [vessel.program :as vessel]
             [vessel.test-helpers :refer [classpath ensure-clean-test-dir]]))
 
-(use-fixtures :once (ensure-clean-test-dir))
-
 (def project-dir (io/file "test/resources/my-app"))
-
 (def target-dir (io/file "target/tests/program-integration-test"))
+
+(def registry
+  "Name of the Docker registry to be used in the test suite.
+
+  Defaults to localhost, but it may be overwritten through the
+  environment variable VESSEL_TEST_REGISTRY."
+  (or (System/getenv "VESSEL_TEST_REGISTRY")
+                  "localhost"))
+
+(use-fixtures :once (ensure-clean-test-dir))
 
 (deftest vessel-test
   (providing [(#'vessel/exit int?) (calling identity)]
@@ -45,27 +53,27 @@
                image to be built; merges the manifests created previously"
                (is (zero? (vessel/-main "image"
                                         "--repository" "nubank/my-app"
-                                        "--registry" "registry:5000"
+                                        "--registry" (str registry ":5000")
                                         "--attribute" "comment:My Clojure application"
                                         "--base-image" (str (io/file target-dir "openjdk-alpine.json"))
                                         "--merge-into" (str (io/file target-dir "my-app.json"))
                                         "--output" (str (io/file target-dir "image.json")))))
 
-               (is (= {:image
-                       {:repository "nubank/my-app"
-                        :registry   "registry:5000"
-                        :comment    "My Clojure application"
-                        :tag        "71237936c573fd34cde3a0dea637149be73a5323c7dbe16e1b119d36f51cffe4"}
-                       :base-image
-                       {:image
-                        {:repository "openjdk"
-                         :registry   "docker.io"
-                         :comment    "OpenJDK Alpine image"
-                         :tag        "alpine"}}
-                       :service
-                       {:name       "my-app"
-                        :git-commit "07dccc801700cbe28e4a428e455b4627e0ab4ba9"}}
-                      (misc/read-json (io/file target-dir "image.json")))))
+               (is (match? {:image
+                            {:repository "nubank/my-app"
+                             :registry   (str registry ":5000")
+                             :comment    "My Clojure application"
+                             :tag        #"^[0-9a-f]{64}$"}
+                            :base-image
+                            {:image
+                             {:repository "openjdk"
+                              :registry   "docker.io"
+                              :comment    "OpenJDK Alpine image"
+                              :tag        "alpine"}}
+                            :service
+                            {:name       "my-app"
+                             :git-commit "07dccc801700cbe28e4a428e455b4627e0ab4ba9"}}
+                           (misc/read-json (io/file target-dir "image.json")))))
 
              (testing "containerizes the application"
                (is (zero?
