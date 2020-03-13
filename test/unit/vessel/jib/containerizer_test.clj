@@ -21,7 +21,7 @@
 
 (use-fixtures :once (ensure-clean-test-dir))
 
-(deftest ^:integration containerize-test
+(deftest containerize-test
   (testing "calls Google Jib and containerize the files in question"
     (let [greeting-file (io/file "test/resources/greeting/greeting.txt")]
       (binding [misc/*verbose-logs* true]
