@@ -45,7 +45,7 @@
                image to be built; merges the manifests created previously"
                (is (zero? (vessel/-main "image"
                                         "--repository" "nubank/my-app"
-                                        "--registry" "localhost:5000"
+                                        "--registry" "registry:5000"
                                         "--attribute" "comment:My Clojure application"
                                         "--base-image" (str (io/file target-dir "openjdk-alpine.json"))
                                         "--merge-into" (str (io/file target-dir "my-app.json"))
@@ -53,7 +53,7 @@
 
                (is (= {:image
                        {:repository "nubank/my-app"
-                        :registry   "localhost:5000"
+                        :registry   "registry:5000"
                         :comment    "My Clojure application"
                         :tag        "71237936c573fd34cde3a0dea637149be73a5323c7dbe16e1b119d36f51cffe4"}
                        :base-image

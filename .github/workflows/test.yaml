@@ -27,3 +27,34 @@ jobs:
 
     - name: Run unit tests
       run: 'make unit-test'
+
+  integration-test:
+    runs-on: ubuntu-latest
+    container:
+      image: circleci/clojure:openjdk-11-tools-deps-1.10.1.502
+      options: -u 1001:115
+
+    services:
+      registry:
+        image: registry:2
+        ports:
+          - 5000:5000
+
+    steps:
+    - name: Checkout repository
+      uses:       actions/checkout@v2
+
+    - name: Cache Maven deps
+      uses: actions/cache@v1
+      env:
+        cache-name: cache-maven-deps
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
+        restore-keys: |
+          ${{ runner.os }}-build-${{ env.cache-name }}-
+          ${{ runner.os }}-build-
+          ${{ runner.os }}-
+
+    - name: Run integration tests
+      run: 'make integration-test'
