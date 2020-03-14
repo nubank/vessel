@@ -76,11 +76,11 @@
   (map #(.getName %) (.listFiles dir)))
 
 (deftest build-app-test
-  (let [src             (io/file "test/resources/my-app")
+  (let [project-dir             (io/file "test/resources/my-app")
         target          (io/file "target/tests/builder-test/build-app-test")
-        classpath-files (set (map io/file (string/split (classpath src) #":")))
+        classpath-files (set (map io/file (string/split (classpath project-dir) #":")))
         options         {:classpath-files classpath-files
-                         :resource-paths  #{(io/file src "resources")}
+                         :resource-paths  #{(io/file project-dir "resources")}
                          :target-dir      target}
         output          (builder/build-app (assoc options                                    :main-class 'my-app.server))]
     (testing "the classes directory has the expected files and directories"
