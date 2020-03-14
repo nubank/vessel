@@ -10,7 +10,7 @@
   progrock #:mvn{:version "0.1.2"}}
  :aliases
  {:dev
-  {:extra-paths ["dev/resources" "test"]
+  {:extra-paths ["dev/resources" "test/unit" "test/integration"]
    :extra-deps
    {cognitect/test-runner
     {:git/url "https://github.com/cognitect-labs/test-runner.git"
