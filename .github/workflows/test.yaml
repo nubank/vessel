@@ -16,10 +16,10 @@ jobs:
     - name: Cache Maven deps
       uses: actions/cache@v1
       env:
-        cache-name: cache-maven-deps
+        cache-name: maven-deps
       with:
-        path: ~/.m2
-        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
+        path: /__w/vessel/vessel/?/.m2
+        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('deps.edn') }}
         restore-keys: |
           ${{ runner.os }}-build-${{ env.cache-name }}-
           ${{ runner.os }}-build-
@@ -49,10 +49,10 @@ jobs:
     - name: Cache Maven deps
       uses: actions/cache@v1
       env:
-        cache-name: cache-maven-deps
+        cache-name: maven-deps
       with:
-        path: ~/.m2
-        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/deps.edn') }}
+        path: /__w/vessel/vessel/?/.m2
+        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('deps.edn') }}
         restore-keys: |
           ${{ runner.os }}-build-${{ env.cache-name }}-
           ${{ runner.os }}-build-
