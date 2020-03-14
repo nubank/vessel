@@ -76,7 +76,7 @@
   (map #(.getName %) (.listFiles dir)))
 
 (deftest build-app-test
-  (let [project-dir             (io/file "test/resources/my-app")
+  (let [project-dir     (io/file "test/resources/my-app")
         target          (io/file "target/tests/builder-test/build-app-test")
         classpath-files (set (map io/file (string/split (classpath project-dir) #":")))
         options         {:classpath-files classpath-files
@@ -90,9 +90,8 @@
                                    "resource1.edn"])
                   (get-file-names (io/file target "WEB-INF/classes")))))
 
-    (testing "the lib directory has some known files"
-      (is (match? (m/in-any-order ["clojure-1.10.1.jar"
-                                   "core.specs.alpha-0.2.44.jar"
+    (testing "the lib directory has the expected files"
+      (is (match? (m/in-any-order ["core.specs.alpha-0.2.44.jar"
                                    "javax.servlet-api-3.1.0.jar"
                                    "jetty-http-9.4.25.v20191220.jar"
                                    "jetty-io-9.4.25.v20191220.jar"
@@ -111,7 +110,8 @@
       (is (= (set (:app/lib output))
              (set (misc/filter-files (file-seq (io/file target "WEB-INF/lib")))))))
 
-    #_(testing "throws an exception describing the underwing compilation error"
+    ;; TODO: uncomment after fixing https://github.com/nubank/vessel/issues/7.
+    #_ (testing "throws an exception describing the underwing compilation error"
         (is (thrown-match? clojure.lang.ExceptionInfo
                            #:vessel.error{:category :vessel/compilation-error}
                            (builder/build-app (assoc options :main-class 'my-app.compilation-error)))))))
