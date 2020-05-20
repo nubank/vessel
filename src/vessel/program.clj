@@ -6,10 +6,6 @@
             [vessel.cli :as cli]
             [vessel.misc :as misc]))
 
-(def ^:private cwd
-  "Current working directory."
-  (.getCanonicalFile (io/file ".")))
-
 (def verbose ["-v" "--verbose"
               :id :verbose?
               :desc "Show verbose messages"])
@@ -33,6 +29,7 @@
             ["-c" "--classpath PATHS"
              :id :classpath-files
              :desc "Directories and zip/jar files on the classpath in the same format expected by the java command"
+             :required? true
              :parse-fn (comp set (partial map io/file) #(string/split % #":"))]
             ["-e" "--extra-path PATH"
              :id :extra-paths
@@ -48,10 +45,12 @@
             ["-m" "--main-class NAMESPACE"
              :id :main-class
              :desc "Namespace that contains the application's entrypoint, with a :gen-class directive and a -main function"
+             :required? true
              :parse-fn symbol]
             ["-M" "--manifest PATH"
              :id :manifest
              :desc "manifest file describing the image to be built"
+             :required? true
              :parse-fn io/file
              :validate cli/file-or-dir-must-exist
              :assoc-fn #(assoc %1 %2 (misc/read-json %3))]
@@ -60,24 +59,22 @@
              :desc "path to save the tarball containing the built image"
              :default (io/file "image.tar")
              :parse-fn io/file]
-            ["-p" "--project-root PATH"
-             :id :project-root
-             :desc "root dir of the Clojure project to be built"
-             :default cwd
-             :parse-fn io/file
-             :validate cli/file-or-dir-must-exist]
-            ["-P" "--preserve-file-permissions"
+            ["-p" "--preserve-file-permissions"
              :id :preserve-file-permissions?
              :desc "Preserve original file permissions when copying files to the container. If not enabled, the default permissions for files are 644"]
             ["-s" "--source-path PATH"
              :id :source-paths
              :desc "Directories containing source files. This option can be repeated many times"
+             :default-fn (constantly #{(io/file "src")})
+             :default-desc "src"
              :parse-fn io/file
              :validate cli/file-or-dir-must-exist
              :assoc-fn cli/repeat-option]
             ["-r" "--resource-path PATH"
              :id :resource-paths
              :desc "Directories containing resource files. This option can be repeated many times"
+             :default-fn (constantly #{(io/file "resources")})
+             :default-desc "resources"
              :parse-fn io/file
              :validate cli/file-or-dir-must-exist
              :assoc-fn cli/repeat-option]
