@@ -22,6 +22,10 @@
               result))
           m (partition 2 kvs)))
 
+(def kebab-case
+  "Converts a string in camel or snake case to kebap case."
+  (comp string/lower-case #(string/replace % #"([a-z])([A-Z])|_+" "$1-$2")))
+
 ;; Java interop functions
 
 (defn  ^Path string->java-path
