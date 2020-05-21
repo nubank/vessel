@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 - Integration tests.
 - Workflow file to run tests automatically on Github Actions.
+- Normalize keys of the manifest.json file in order to avoid incongruities. Thus, Vessel can be employed  as a generic alternative to push tarballs to remote registries.
 
 ## [0.2.107] - 2020-03-09
 

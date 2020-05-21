@@ -28,6 +28,14 @@
          (misc/assoc-some {}
                           :a 1 :b nil))))
 
+(deftest kebab-case-test
+  (are [value result] (= result (misc/kebab-case value))
+    "repo-tags" "repo-tags"
+    "repo_tags" "repo-tags"
+    "repoTags"  "repo-tags"
+    "RepoTags"  "repo-tags"
+    "Layers"    "layers"))
+
 (deftest string->java-path-test
   (is (instance? Path (misc/string->java-path "/"))))
 
