@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.126] - 2020-05-21
+
 ### Added
 - Integration tests.
 - Workflow file to run tests automatically on Github Actions.
