@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- [#10](https://github.com/nubank/vessel/pull/10): added out of the box
+  integration with Amazon Elastic Container Registry. Vessel looks up
+  credentials to access AWS API the same way the `awscli` or `Java SDK`
+  do. Thus, Vessel is capable of obtaining credentials to access `ECR`
+  repositories through instance profiles without additional configurations, what
+  might be useful to eliminate extra steps on CI pipelines.
+
 ## [0.2.126] - 2020-05-21
 
 ### Added
