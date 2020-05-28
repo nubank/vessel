@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.128] - 2020-05-28
+
 ### Added
 - [#10](https://github.com/nubank/vessel/pull/10): added out of the box
   integration with Amazon Elastic Container Registry. Vessel looks up
