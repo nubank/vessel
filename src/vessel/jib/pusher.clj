@@ -4,6 +4,7 @@
             [clojure.data.json :as json]
             [clojure.java.io :as io]
             [progrock.core :as progrock]
+            [vessel.jib.credentials :as credentials]
             [vessel.jib.helpers :as jib.helpers]
             [vessel.misc :as misc])
   (:import [com.google.cloud.tools.jib.api DescriptorDigest ImageReference LogEvent]
@@ -58,7 +59,7 @@
                                            anonymous?                 false}}]
   (let [^Credential credential
         (when-not anonymous?
-          (.. (jib.helpers/make-docker-config-retriever image-reference) retrieve get))
+          (.. (credentials/retriever-chain image-reference) retrieve get))
         ^FailoverHttpClient http-client (FailoverHttpClient. allow-insecure-registries? (not anonymous?) (jib.helpers/log-event-handler "vessel.jib.pusher"))
         ^EventHandlers event-handlers   (make-event-handlers)
         ^RegistryClient client

@@ -1,9 +1,8 @@
 (ns vessel.jib.helpers
   "Helper functions for dealing with orthogonal features of Google Jib."
   (:require [vessel.misc :as misc])
-  (:import [com.google.cloud.tools.jib.api AbsoluteUnixPath CredentialRetriever ImageReference]
+  (:import com.google.cloud.tools.jib.api.AbsoluteUnixPath
            com.google.cloud.tools.jib.event.events.ProgressEvent
-           com.google.cloud.tools.jib.frontend.CredentialRetrieverFactory
            com.google.cloud.tools.jib.tar.TarExtractor
            java.io.File))
 
@@ -26,14 +25,6 @@
                                    (* (.. progress-event getAllocation getFractionOfRoot)
                                       (.getUnits progress-event)
                                       100)))))
-
-(defn ^CredentialRetriever make-docker-config-retriever
-  "Returns an instance of a CredentialRetriever for retrieving
-  credentials from Docker config."
-  [^ImageReference image-reference]
-  (.. CredentialRetrieverFactory
-      (forImage image-reference (log-event-handler "vessel.jib.helpers"))
-      dockerConfig))
 
 (defn extract-tarball
   "Extracts the tarball into the specified destination."

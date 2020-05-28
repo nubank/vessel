@@ -1,6 +1,7 @@
 (ns vessel.jib.containerizer
   "Containerization API built on top of Google Jib."
-  (:require [vessel.jib.helpers :as jib.helpers]
+  (:require [vessel.jib.credentials :as credentials]
+            [vessel.jib.helpers :as jib.helpers]
             [vessel.misc :as misc])
   (:import [com.google.cloud.tools.jib.api Containerizer FilePermissions ImageFormat ImageReference Jib JibContainerBuilder LayerConfiguration LayerConfiguration$Builder LayerEntry LogEvent RegistryImage TarImage]
            com.google.cloud.tools.jib.event.events.ProgressEvent
@@ -69,7 +70,7 @@
   "Given an ImageReference instance, returns a new registry image
   object."
   [^ImageReference image-reference]
-  (let [^CredentialRetriever retriever (jib.helpers/make-docker-config-retriever image-reference)]
+  (let [^CredentialRetriever retriever (credentials/retriever-chain image-reference)]
     (.. RegistryImage (named image-reference)
         (addCredentialRetriever retriever))))
 
