@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- [#12](https://github.com/nubank/vessel/pull/12): resolve classpath files by
+  its own by using
+  [tools.deps.alpha](https://github.com/clojure/tools.deps.alpha).
+
 ## [0.2.128] - 2020-05-28
 
 ### Added

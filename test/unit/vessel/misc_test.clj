@@ -28,6 +28,12 @@
          (misc/assoc-some {}
                           :a 1 :b nil))))
 
+(deftest map-vals-test
+  (are [map result] (= result (misc/map-vals inc map))
+    {}          {}
+    {:a 1}      {:a 2}
+    {:a 1 :b 2} {:a 2 :b 3}))
+
 (deftest kebab-case-test
   (are [value result] (= result (misc/kebab-case value))
     "repo-tags" "repo-tags"
