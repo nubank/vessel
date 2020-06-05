@@ -15,7 +15,8 @@
            com.google.cloud.tools.jib.http.FailoverHttpClient
            [com.google.cloud.tools.jib.image.json BuildableManifestTemplate V22ManifestTemplate]
            com.google.cloud.tools.jib.registry.RegistryClient
-           java.io.File))
+           java.io.File
+           java.util.Optional))
 
 (defn- show-progress
   [progress-bar]
@@ -66,7 +67,7 @@
         (-> (RegistryClient/factory event-handlers (.getRegistry image-reference) (.getRepository image-reference) http-client)
             (cond-> (not anonymous?)
               (.setCredential credential))
-            (.setUserAgentSuffix "vessel")
+            (.setUserAgent "vessel")
             (.newRegistryClient))]
     (when-not anonymous?
       (authenticate client))
@@ -131,8 +132,8 @@
   "Pushes the image manifest for a specific tag into the target repository.
 
   Returns the digest of the pushed image."
-  [^RegistryClient client progress-channel ^BuildableManifestTemplate manifest ^String tag]
-  (let [^DescriptorDigest digest (.pushManifest client manifest tag)]
+  [^RegistryClient client progress-channel ^BuildableManifestTemplate manifest ^Optional tag]
+  (let [^DescriptorDigest digest (.pushManifest client manifest (.get tag))]
     (>!! progress-channel #:progress{:status :done})
     digest))
 

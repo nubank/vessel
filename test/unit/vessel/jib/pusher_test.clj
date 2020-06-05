@@ -84,7 +84,7 @@
                     (#'pusher/check-blob (a RegistryClient) layer2-digest) true
                     ;; Called from push-container-config
                     (#'pusher/push-blob (a RegistryClient) (any) (pred map?)) any
-                    (pusher/push-manifest (a RegistryClient) (any) (manifest-of-digest image-digest) "v1") image-digest]
+                    (pusher/push-manifest (a RegistryClient) (any) (manifest-of-digest image-digest) (Optional/of "v1")) image-digest]
                    (is (any?
                         (pusher/push {:tarball  tarball
                                       :temp-dir temp-dir}))))))

@@ -8,7 +8,7 @@
            java.security.MessageDigest
            java.text.DecimalFormat
            [java.time Duration Instant]
-           java.util.function.Consumer
+           [java.util.function Consumer Function]
            java.util.Locale))
 
 (defn assoc-some
@@ -39,6 +39,13 @@
   [f]
   (reify Consumer
     (accept [_ arg]
+      (f arg))))
+
+(defn   ^Function java-function
+  "Returns a java.util.function.Function instance that calls the function f."
+  [f]
+  (reify Function
+    (apply [_ arg]
       (f arg))))
 
 (defn now

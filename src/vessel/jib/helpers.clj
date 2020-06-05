@@ -1,7 +1,7 @@
 (ns vessel.jib.helpers
   "Helper functions for dealing with orthogonal features of Google Jib."
   (:require [vessel.misc :as misc])
-  (:import com.google.cloud.tools.jib.api.AbsoluteUnixPath
+  (:import com.google.cloud.tools.jib.api.buildplan.AbsoluteUnixPath
            com.google.cloud.tools.jib.event.events.ProgressEvent
            com.google.cloud.tools.jib.tar.TarExtractor
            java.io.File))
