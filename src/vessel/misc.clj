@@ -22,6 +22,13 @@
               result))
           m (partition 2 kvs)))
 
+(defn map-vals
+  "Applies the function f to each value in the map m and return the
+  resulting map."
+  [f m]
+  (into {} (map (fn [[k v]]
+                  [k (f v)]) m)))
+
 (def kebab-case
   "Converts a string in camel or snake case to kebap case."
   (comp string/lower-case #(string/replace % #"([a-z])([A-Z])|_+" "$1-$2")))
