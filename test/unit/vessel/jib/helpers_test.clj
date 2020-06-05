@@ -6,7 +6,7 @@
             [vessel.jib.helpers :as jib.helpers]
             [vessel.misc :as misc]
             [vessel.test-helpers :refer [ensure-clean-test-dir]])
-  (:import com.google.cloud.tools.jib.api.AbsoluteUnixPath))
+  (:import com.google.cloud.tools.jib.api.buildplan.AbsoluteUnixPath))
 
 (use-fixtures :once (ensure-clean-test-dir))
 

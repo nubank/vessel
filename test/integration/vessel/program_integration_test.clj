@@ -20,7 +20,8 @@
 
 (use-fixtures :once (ensure-clean-test-dir))
 
-(deftest vessel-test
+;; Uncomment once the new API is ready to be tested.
+#_(deftest vessel-test
   (providing [(#'vessel/exit int?) (calling identity)]
 
              (testing "generates a manifest file containing metadata about the

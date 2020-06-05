@@ -4,7 +4,7 @@
             [clojure.data.json :as json]
             [clojure.java.io :as io]
             [progrock.core :as progrock]
-            [vessel.jib.credentials :as credentials]
+            [vessel.jib.credentials :as jib.credentials]
             [vessel.jib.helpers :as jib.helpers]
             [vessel.misc :as misc])
   (:import [com.google.cloud.tools.jib.api DescriptorDigest ImageReference LogEvent]
@@ -15,7 +15,8 @@
            com.google.cloud.tools.jib.http.FailoverHttpClient
            [com.google.cloud.tools.jib.image.json BuildableManifestTemplate V22ManifestTemplate]
            com.google.cloud.tools.jib.registry.RegistryClient
-           java.io.File))
+           java.io.File
+           java.util.Optional))
 
 (defn- show-progress
   [progress-bar]
@@ -59,14 +60,14 @@
                                            anonymous?                 false}}]
   (let [^Credential credential
         (when-not anonymous?
-          (.. (credentials/retriever-chain image-reference) retrieve get))
+          (.. (jib.credentials/retriever-chain image-reference) retrieve get))
         ^FailoverHttpClient http-client (FailoverHttpClient. allow-insecure-registries? (not anonymous?) (jib.helpers/log-event-handler "vessel.jib.pusher"))
         ^EventHandlers event-handlers   (make-event-handlers)
         ^RegistryClient client
         (-> (RegistryClient/factory event-handlers (.getRegistry image-reference) (.getRepository image-reference) http-client)
             (cond-> (not anonymous?)
               (.setCredential credential))
-            (.setUserAgentSuffix "vessel")
+            (.setUserAgent "vessel")
             (.newRegistryClient))]
     (when-not anonymous?
       (authenticate client))
@@ -131,8 +132,8 @@
   "Pushes the image manifest for a specific tag into the target repository.
 
   Returns the digest of the pushed image."
-  [^RegistryClient client progress-channel ^BuildableManifestTemplate manifest ^String tag]
-  (let [^DescriptorDigest digest (.pushManifest client manifest tag)]
+  [^RegistryClient client progress-channel ^BuildableManifestTemplate manifest ^Optional tag]
+  (let [^DescriptorDigest digest (.pushManifest client manifest (.get tag))]
     (>!! progress-channel #:progress{:status :done})
     digest))
 
@@ -241,4 +242,4 @@
         layer-descriptors                 (push-layers client progress-channel temp-dir layers)
         ^BlobDescriptor config-descriptor (push-container-config client progress-channel (make-blob-data temp-dir config))
         ^DescriptorDigest digest          (push-manifest client progress-channel (make-buildable-manifest-template config-descriptor layer-descriptors) (.getTag image-reference))]
-    (misc/log :info "%s: digest: %s" (.getTag image-reference) digest)))
+    (misc/log :info "%s: digest: %s" (.. image-reference getTag get) digest)))

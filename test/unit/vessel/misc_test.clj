@@ -9,7 +9,7 @@
   (:import [java.io StringReader StringWriter]
            java.nio.file.Path
            [java.time Duration Instant]
-           java.util.function.Consumer))
+           [java.util.function Consumer Function]))
 
 (use-fixtures :once (ensure-clean-test-dir))
 
@@ -47,6 +47,14 @@
          (with-out-str
            (.. (misc/java-consumer #(printf %))
                (accept "Hello world!"))))))
+
+(deftest java-function-test
+  (is (instance? Function
+                 (misc/java-function identity))
+
+      (is (= 2
+             (.. (misc/java-function inc)
+                 (apply 1))))))
 
 (deftest now-test
   (is (instance? Instant (misc/now))))
