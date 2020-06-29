@@ -5,10 +5,8 @@
             [matcher-combinators.test :refer [match?]]
             [vessel.jib.containerizer :as jib.containerizer]
             [vessel.misc :as misc]
-            [vessel.test-helpers :refer [ensure-clean-test-dir]])
-  (:import java.io.File
-           java.time.Instant
-           org.apache.commons.vfs2.VFS))
+            [vessel.test-helpers :refer [ensure-clean-test-dir read-from-tarball]])
+  (:import java.time.Instant))
 
 (use-fixtures :once (ensure-clean-test-dir))
 
@@ -17,15 +15,6 @@
 (def tar-path-2 (io/file "target/tests/containerizer-test/my-app-2.tar"))
 
 (def cache-dir (misc/make-dir (misc/home-dir) ".vessel-cache"))
-
-(defn read-from-tarball
-  [^File tarball ^String file-name]
-  (let [cwd      (str (.getCanonicalFile (io/file ".")))
-        tar-file (format "tar:%s/%s!/%s" cwd tarball file-name)]
-    (.. VFS getManager
-        (resolveFile tar-file)
-        getContent
-        getInputStream)))
 
 ;; Make layers deterministic.
 (def fixed-modification-time

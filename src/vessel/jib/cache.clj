@@ -1,6 +1,9 @@
 (ns vessel.jib.cache
-  (:import com.google.cloud.tools.jib.api.buildplan.FileEntriesLayer
-           com.google.cloud.tools.jib.api.DescriptorDigest
+  (:require [clojure.java.io :as io]
+            [vessel.misc :as misc])
+  (:import clojure.lang.IPersistentMap
+           [com.google.cloud.tools.jib.api DescriptorDigest ImageReference]
+           com.google.cloud.tools.jib.api.buildplan.FileEntriesLayer
            [com.google.cloud.tools.jib.cache Cache CachedLayer]
            com.google.common.collect.ImmutableList
            java.io.File
@@ -35,3 +38,28 @@
     (if (.isPresent cached-layer)
       (.get cached-layer)
       (throw (IllegalStateException. (str "Could not retrieve cached layer for digest " digest))))))
+
+(defn- ^File assemble-index-path
+  "Returns a java.io.File representing a possible index file within the cache
+  directory for the supplied target image and manifest sha256."
+  [^File cache-dir ^String target-image ^String manifest-sha]
+  (let [^ImageReference image-reference (ImageReference/parse target-image)]
+    (io/file cache-dir
+             "indexes"
+             (.getRegistry image-reference)
+             (.getRepository image-reference)
+             (str manifest-sha ".edn"))))
+
+(defn ^IPersistentMap retrieve-extended-cache-index
+  ""
+  [^File cache-dir ^String target-image ^String manifest-sha]
+  (let [index (assemble-index-path cache-dir target-image manifest-sha)]
+    (when (misc/file-exists? index)
+      (misc/read-edn index))))
+
+(defn upsert-extended-cache-index
+  ""
+  [^File cache-dir ^String target-image ^String manifest-sha ^IPersistentMap index-data]
+  (let [^File index (assemble-index-path cache-dir target-image manifest-sha)]
+    (misc/make-dir (.getParentFile index))
+    (spit index (pr-str index-data))))

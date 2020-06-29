@@ -3,7 +3,8 @@
             [clojure.java.shell :as shell]
             [clojure.string :as string]
             [vessel.misc :as misc])
-  (:import java.io.File))
+  (:import java.io.File
+           org.apache.commons.vfs2.VFS))
 
 (defmacro ensure-clean-test-dir
   "Expands to a fixture function that creates a clean directory under target/tests/<namespace>.
@@ -15,6 +16,15 @@
   `(fn [test#]
      (misc/make-empty-dir "target" "tests" ~(last (string/split (name (ns-name *ns*)) #"\.")))
      (test#)))
+
+(defn read-from-tarball
+  [^File tarball ^String file-name]
+  (let [cwd      (str (.getCanonicalFile (io/file ".")))
+        tar-file (format "tar:%s/%s!/%s" cwd tarball file-name)]
+    (.. VFS getManager
+        (resolveFile tar-file)
+        getContent
+        getInputStream)))
 
 (defn ^String classpath
   "Runs the clojure -Spath command to determine the classpath of the
