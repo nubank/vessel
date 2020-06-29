@@ -4,10 +4,20 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-### Added
+### ADDED
 - [#12](https://github.com/nubank/vessel/pull/12): resolve classpath files by
   its own by using
   [tools.deps.alpha](https://github.com/clojure/tools.deps.alpha).
+- internal: `vessel.jib.containerizer` now supports an extended cache mechanism
+  that allows Vessel to inject custom cached layers into the container being
+  built. This feature aims to solve issues with the containerization process of compiled
+  Clojure files. Since the compilation isn't deterministic, it becomes
+  impossible to leverage regular cached layers and all layers end up being built every time ([#13](https://github.com/nubank/vessel/pull/13)).
+- Internal: add the dependency `com.google.cloud.tools/jib-build-plan`.
+
+### Changed
+- Improve significantly the design of `vessel.jib.containerizer` and fix flaky tests ([#13](https://github.com/nubank/vessel/pull/13)).
+- Internal: upgrade to ` com.google.cloud.tools/jib-core` 0.14.0.
 
 ## [0.2.128] - 2020-05-28
 
@@ -24,7 +34,11 @@ All notable changes to this project will be documented in this file.
 ### Added
 - Integration tests.
 - Workflow file to run tests automatically on Github Actions.
-- Normalize keys of the manifest.json file in order to avoid incongruities. Thus, Vessel can be employed  as a generic alternative to push tarballs to remote registries.
+
+### Fixed
+- Normalize keys of the manifest.json file in order to avoid
+  incongruities. Thus, Vessel can be employed as a generic alternative to push
+  tarballs to remote registries.
 
 ## [0.2.107] - 2020-03-09
 
@@ -39,23 +53,23 @@ All notable changes to this project will be documented in this file.
 ## [0.2.99] - 2020-03-02
 
 ### Added
-* Push command to upload a tarball to a registry.
+- Push command to upload a tarball to a registry.
 
 ### Changed
-* Internal: rename vessel.jib namespace to vessel.jib.containerizer and move
+- Internal: rename vessel.jib namespace to vessel.jib.containerizer and move
 functions that deal with common aspects of Jib API to the new
   vessel.jib.helpers namespace.
-* Upgrade Jib to version 0.13.0.
+- Upgrade Jib to version 0.13.0.
 
 ## [0.1.90] - 2020-02-20
 
 ### Added
-* Set the directory for caching base image and application layers to
+- Set the directory for caching base image and application layers to
   ~/.vessel-cache. Eventually, Vessel can take this directory as a parameter to
   allow a more fine-grained customization.
 
 ## [0.1.84] - 2020-02-18
 
 ### Added
-* Containerize, image and manifest commands (Vessel is in an alpha stage; the
+- Containerize, image and manifest commands (Vessel is in an alpha stage; the
   API is subject to changes).

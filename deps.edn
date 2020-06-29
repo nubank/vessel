@@ -11,7 +11,8 @@
   com.cognitect.aws/ecr           #:mvn {:version "798.2.678.0"}
   clj-commons/spinner             #:mvn {:version "0.6.0"}
   progrock                        #:mvn {:version "0.1.2"}
-  com.google.cloud.tools/jib-core #:mvn {:version "0.13.0"}}
+  com.google.cloud.tools/jib-core #:mvn {:version "0.14.0"}
+  com.google.cloud.tools/jib-build-plan #:mvn{:version "0.2.0"}}
  :aliases
  {:dev
   {:extra-paths ["dev/resources" "test/unit" "test/integration"]
