@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### ADDED
+- [#12](https://github.com/nubank/vessel/pull/12): resolve classpath files by
+  its own by using
+  [tools.deps.alpha](https://github.com/clojure/tools.deps.alpha).
 - internal: `vessel.jib.containerizer` now supports an extended cache mechanism
   that allows Vessel to inject custom cached layers into the container being
   built. This feature aims to solve issues with the containerization process of compiled
