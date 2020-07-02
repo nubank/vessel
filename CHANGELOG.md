@@ -14,6 +14,10 @@ All notable changes to this project will be documented in this file.
   Clojure files. Since the compilation isn't deterministic, it becomes
   impossible to leverage regular cached layers and all layers end up being built every time ([#13](https://github.com/nubank/vessel/pull/13)).
 - Internal: add the dependency `com.google.cloud.tools/jib-build-plan`.
+- [#19](https://github.com/nubank/vessel/pull/19): introduce Vessel
+  manifests. Manifests are declarative files in the EDN format containing
+  various attributes that control how Vessel builds and containerizes Clojure
+  applications.
 
 ### Changed
 - Improve significantly the design of `vessel.jib.containerizer` and fix flaky tests ([#13](https://github.com/nubank/vessel/pull/13)).
