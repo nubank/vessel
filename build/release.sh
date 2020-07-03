@@ -18,9 +18,17 @@ vessel_dir=$dist/vessel
 
 vessel_tar_gz=$dist/vessel-$version.tar.gz
 
+function get_today() {
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        gdate --utc +'%Y-%m-%d'
+    else
+        date --utc +'%Y-%m-%d'
+    fi
+}
+
 function update_changelog() {
     local changelog=$cur_dir/../CHANGELOG.md
-    local today=$(date --utc +'%Y-%m-%d')
+    local today=$(get_today)
     sed -ie "s/\(##\s*\[Unreleased\]\)/\1\n\n## [$version] - $today/g" $changelog
     git add $changelog; git commit -m "Release version $version."
     git push origin master
