@@ -81,6 +81,10 @@
              :parse-fn io/file
              :validate cli/file-or-dir-must-exist
              :assoc-fn cli/repeat-option]
+            ["-u" "--user USER"
+             :id :user
+             :desc "Define the default user for the image"
+             :default "root"]
             verbose]}
 
     "image"
