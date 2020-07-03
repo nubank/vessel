@@ -23,6 +23,7 @@ Containerize a Clojure application
 | `-P` `--preserve-file-permissions` | `--` | Preserve original file permissions when copying files to the container. If not enabled, the default permissions for files are 644 |
 | `-s` `--source-path PATH` | `--` | Directories containing source files. This option can be repeated many times |
 | `-r` `--resource-path PATH` | `--` | Directories containing resource files. This option can be repeated many times |
+| `-u` `--user USER` | `root` | Define the default user for the image |
 
 > `image`:
 

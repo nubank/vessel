@@ -27,6 +27,7 @@
       (binding [misc/*verbose-logs* true]
         (jib.containerizer/containerize #:image{:from
                                                 #:image   {:repository "openjdk" :tag "sha256:1fd5a77d82536c88486e526da26ae79b6cd8a14006eb3da3a25eb8d2d682ccd6"}
+                                                :user "jetty"
                                                 :name
                                                 #:image   {:repository "nubank/my-app" :tag "v1"}
                                                 :layers

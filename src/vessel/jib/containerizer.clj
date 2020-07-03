@@ -66,6 +66,11 @@
             (.addLayer builder (make-layer-configuration layer)))
           container-builder layers))
 
+(defn- ^JibContainerBuilder set-user
+  "Set the user for the image"
+  [^JibContainerBuilder container-builder user]
+  (.setUser container-builder user))
+
 (defn-   ^RegistryImage make-registry-image
   "Given an ImageReference instance, returns a new registry image
   object."
@@ -98,8 +103,9 @@
 (defn containerize
   "Given an image spec, containerize the application in question by
   producing a tarball containing image layers and metadata files."
-  [{:image/keys [from layers] :as image-spec}]
+  [{:image/keys [from user layers] :as image-spec}]
   {:pre [from layers]}
   (-> (make-container-builder from)
       (add-layers layers)
+      (set-user user)
       (containerize* image-spec)))

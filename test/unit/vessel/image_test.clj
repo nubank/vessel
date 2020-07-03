@@ -57,6 +57,7 @@
                             {:image {:repository "jetty" :registry "my-company.com" :tag "v1"}}
                             :image {:repository "my-app" :registry "my-company.com" :tag "v2"}}
                            :tarball          (io/file "my-app.tar")
+                           :user             "jetty"
                            :target-dir       target-dir}
         modification-time (misc/now)]
     (providing [(misc/last-modified-time (partial instance? File)) modification-time]
@@ -65,6 +66,7 @@
   for the files in question"
                  (is (= #:image{:from
                                 #:image   {:registry "my-company.com" :repository "jetty" :tag "v1"}
+                                :user "jetty"
                                 :name
                                 #:image   {:registry "my-company.com" :repository "my-app" :tag "v2"}
                                 :layers

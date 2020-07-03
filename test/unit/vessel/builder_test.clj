@@ -82,7 +82,7 @@
         options         {:classpath-files classpath-files
                          :resource-paths  #{(io/file project-dir "resources")}
                          :target-dir      target}
-        output          (builder/build-app (assoc options                                    :main-class 'my-app.server))]
+        output          (builder/build-app (assoc options :main-class 'my-app.server))]
     (testing "the classes directory has the expected files and directories"
       (is (match? (m/in-any-order ["clojure"
                                    "META-INF"
