@@ -3,6 +3,8 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+
+### Added
 - [#15](https://github.com/nubank/vessel/pull/15): added the user option
   to set the default user image
 
