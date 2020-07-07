@@ -92,12 +92,12 @@
   (testing "prints or omits the message depending on the value bound to
   *verbose-logs* and the supplied log level"
     (are [verbose? stream level result]
-         (= result
-            (let [writer (java.io.StringWriter.)]
-              (binding [misc/*verbose-logs* verbose?
-                        stream writer]
-                (misc/log* level "me" "Hello!")
-                (str writer))))
+        (= result
+           (let [writer (java.io.StringWriter.)]
+             (binding [misc/*verbose-logs* verbose?
+                       stream writer]
+               (misc/log* level "me" "Hello!")
+               (str writer))))
       true  *out* :info  "INFO [me] Hello!\n"
       true  *out* "info" "INFO [me] Hello!\n"
       true  *out* :debug "DEBUG [me] Hello!\n"
@@ -122,14 +122,26 @@
              (binding [misc/*verbose-logs* true]
                (misc/log :info "Hello %s!" "John Doe")))))))
 
-(def cwd (io/file (.getCanonicalPath (io/file "."))))
+(def cwd (misc/canonicalize-file (io/file ".")))
+
+(deftest file-exists?-test
+  (is (misc/file-exists? (io/file "deps.edn"))))
+
+(deftest file?-test
+  (is (misc/file? (io/file "deps.edn"))))
+
+(deftest directory?-test
+  (is (misc/directory? (io/file "src"))))
+
+(deftest absolute-file?-test
+  (is (misc/absolute-file? cwd)))
 
 (deftest filter-files-test
-  (is (every? #(.isFile %)
+  (is (every? #(misc/file? %)
               (misc/filter-files (file-seq cwd)))))
 
 (deftest home-dir-test
-  (is (true? (misc/file-exists? (misc/home-dir)))))
+  (is (misc/file-exists? (misc/home-dir))))
 
 (deftest last-modified-time-test
   (is (instance? Instant

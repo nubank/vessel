@@ -6,7 +6,8 @@
             [vessel.clojure.builder :as builder]
             [vessel.clojure.classpath :as classpath]
             [vessel.misc :as misc]
-            [vessel.test-helpers :refer [ensure-clean-test-dir]])
+            [vessel.test-helpers :refer [ensure-clean-test-dir]]
+            [vessel.v1 :as v1])
   (:import java.io.File))
 
 (use-fixtures :once (ensure-clean-test-dir))
@@ -79,12 +80,10 @@
   (let [project-dir  (io/file "test/resources/my-app")
         target-dir   (io/file "target/tests/builder-test/build-application-test")
         deps         (classpath/assemble-deps {:clojure/tool :tools.deps.alpha :project/descriptor (io/file project-dir "deps.edn")})
-        options      {:deps           deps
-                      :main-ns        'my-app.server
-                      :source-paths   #{(io/file project-dir "src")}
-                      :resource-paths #{(io/file project-dir "resources")}
-                      :target-dir     target-dir}
-        build-result (builder/build-application options)]
+        manifest      #::v1{:main-ns        'my-app.server
+                            :source-paths   #{(io/file project-dir "src")}
+                            :resource-paths #{(io/file project-dir "resources")}}
+        build-result (builder/build-application manifest deps target-dir)]
 
     (testing "the classes directory has the expected files and directories"
       (is (match? (m/in-any-order ["clojure"
@@ -127,4 +126,4 @@
     #_(testing "throws an exception describing the underwing compilation error"
         (is (thrown-match? clojure.lang.ExceptionInfo
                            #:vessel.error{:category :vessel/compilation-error}
-                           (builder/build-application (assoc options :main-ns 'my-app.compilation-error)))))))
+                           (builder/build-application (assoc manifest :main-ns 'my-app.compilation-error) deps target-dir))))))

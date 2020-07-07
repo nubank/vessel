@@ -1,6 +1,6 @@
 (ns vessel.hashing
   (:require [clojure.java.io :as io])
-  (:import [clojure.lang IPersistentSet Sequential]
+  (:import [clojure.lang IPersistentMap IPersistentSet Sequential]
            [java.io ByteArrayOutputStream File]
            java.security.MessageDigest))
 
@@ -34,28 +34,37 @@
     "Returns the sha256 digest for the supplied input."))
 
 (extend-protocol Hashing
+
+  Object
+  (sha256 [obj]
+    (sha256 (str obj)))
+
   String
-  (sha256 [^String input]
-    (sha256-sum (.getBytes input)))
+  (sha256 [^String s]
+    (sha256-sum (.getBytes s)))
 
   Sequential
-  (sha256 [^ISeq input]
-    (if (= 1 (count input))
-      (sha256 (first input))
-      (->> input
+  (sha256 [^Sequential s]
+    (if (= 1 (count s))
+      (sha256 (first s))
+      (->> s
            (map sha256)
            sort
            (apply str)
            sha256)))
 
   IPersistentSet
-  (sha256 [^IPersistentSet input]
-    (sha256 (vec input)))
+  (sha256 [^IPersistentSet s]
+    (sha256 (vec s)))
+
+  IPersistentMap
+  (sha256 [^IPersistentMap m]
+    (sha256 (map sha256 m)))
 
   File
-  (sha256 [^File input]
-    (if (.isFile input)
-      (sha256-sum (get-bytes input))
-      (->> (file-seq input)
+  (sha256 [^File f]
+    (if (.isFile f)
+      (sha256-sum (get-bytes f))
+      (->> (file-seq f)
            (filter #(.isFile %))
            sha256))))
