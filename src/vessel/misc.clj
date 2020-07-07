@@ -119,10 +119,32 @@
           ~level ~(str (ns-name *ns*)) ~message
           [~@args]))
 
+;; File system utilities.
+
 (defn file-exists?
   "Returns true if the file exists or false otherwise."
   [^File file]
   (.exists file))
+
+(defn file?
+  "True if f is a file."
+  [^File f]
+  (.isFile f))
+
+(defn directory?
+  "True if f is a directory."
+  [^File f]
+  (.isDirectory f))
+
+(defn absolute-file?
+  "True if the file or directory in question represents an absolute path."
+  [^File f]
+  (.isAbsolute f))
+
+(defn ^File canonicalize-file
+  "Returns the canonical version of the file f."
+  [^File f]
+  (.getCanonicalFile f))
 
 (defn filter-files
   "Given a sequence of java.io.File objects (either files or
