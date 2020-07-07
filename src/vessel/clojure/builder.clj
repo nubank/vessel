@@ -7,8 +7,9 @@
             [clojure.string :as string]
             [clojure.tools.namespace.find :as namespace.find]
             [spinner.core :as spinner]
-            [vessel.misc :as misc])
-  (:import [clojure.lang ISeq IPersistentMap Symbol]
+            [vessel.misc :as misc]
+            [vessel.v1 :as v1])
+  (:import [clojure.lang IPersistentMap ISeq Sequential Symbol]
            [java.io File InputStream]
            [java.net URL URLClassLoader]
            [java.util.jar JarEntry JarFile]))
@@ -59,18 +60,20 @@
 (defn- main-args
   "Returns a Java array containing the arguments to be passed to
   clojure.main/-main function."
-  [^Symbol main-ns ^File target-dir]
+  [^Symbol main-ns ^File target-dir ^IPersistentMap compiler-opts]
   (into-array Object [(into-array String
                                   ["-e"
-                                   (format "(binding [*compile-path* \"%s\"]
-(clojure.core/compile '%s))"
-                                           target-dir (pr-str main-ns))])]))
+                                   (pr-str
+                                    `(binding [*compile-path* ~(.getPath target-dir)
+                                               *compiler-options* ~compiler-opts]
+                                       (clojure.core/compile
+                                        (symbol ~(name main-ns)))))])]))
 
 (defn- compile*
   "Compiles the main-ns by writing compiled .class files to target-dir.
 
   Displays a spin animation during the process."
-  [^Symbol main-ns ^File target-dir classpath]
+  [^Symbol main-ns ^Sequential classpath ^File target-dir ^IPersistentMap compiler-opts]
   (let [urls         (into-array URL (map #(.toURL %) (conj classpath target-dir)))
         class-loader (URLClassLoader. urls (.. ClassLoader getSystemClassLoader getParent))
         clojure      (.loadClass class-loader "clojure.main")
@@ -81,7 +84,7 @@
       @(future
          (let [current-class-loader (.. Thread currentThread (getContextClassLoader))]
            (.. Thread currentThread (setContextClassLoader class-loader))
-           (.invoke main nil (main-args main-ns target-dir))
+           (.invoke main nil (main-args main-ns target-dir compiler-opts))
            (.. Thread currentThread (setContextClassLoader current-class-loader))))
       (catch Throwable t
         (rethrow-compilation-error main-ns t))
@@ -114,10 +117,10 @@
   Returns a map of compiled class files (as instances of java.io.File) to their
   sources (instances of java.io.File too) representing directories or jar files
   on the classpath."
-  [classpath ^Symbol main-ns ^File target-dir]
+  [^Symbol main-ns ^Sequential classpath ^File target-dir ^IPersistentMap compiler-opts]
   (let [namespaces  (find-namespaces-on-classpath classpath)
         classes-dir (misc/make-dir target-dir "classes")
-        _           (compile* main-ns classes-dir classpath)]
+        _           (compile* main-ns classpath classes-dir compiler-opts)]
     (reduce (fn [result ^File class-file]
               (assoc result class-file
                      (get-class-file-source namespaces (misc/relativize class-file classes-dir))))
@@ -213,12 +216,13 @@
   files) referenced by the application in question to the directory lib under
   the supplied target directory.
 
-  Options is a persistent map containing the following meaningful keys:
+  Manifest is a persistent map as spec'ed by :vessel.v1/manifest. The following
+  keys are specially meaningful:
 
-  :deps ISeq of java.io.File
+  :compiler-opts IPersistentMap
 
-  A sequence of file objects representing all dependencies of the
-  application. See also vessel.clojure.classpath/assemble-deps.
+  A map containing the flags accepted by Clojure compiler. For further details,
+  refer to: https://clojure.org/reference/compilation.
 
   :main-ns Symbol
 
@@ -233,19 +237,23 @@
 
   The application's source paths.
 
-  :target-dir java.io.File
+    Deps is a sequence of java.io.File objects representing all dependencies of
+  the application. See also vessel.clojure.classpath/assemble-deps.
 
-  Directory to write compiled classes and libraries to.
+  Target-dir is a java.io.File object representing the directory to write
+  compiled classes and libraries to.
 
   Returns a persistent map containing two keys: :clojure.application/classes and
   :clojure.application/lib. They are maps of java.io.File to java.io.File
   objects mapping target files to their sources. This data structure aims Vessel
   to determine which files belong to each application layer during the
-  containerization process."
-  [^IPersistentMap options]
-  (let [{:keys [deps main-ns resource-paths source-paths target-dir]} options
+  containerization process.
+
+  See also: vessel.clojure.classpath and vessel.reader."
+  [^IPersistentMap manifest ^Sequential deps ^File target-dir]
+  (let [{::v1/keys [compiler-opts, main-ns, resource-paths, source-paths]} manifest
         ^ISeq classpath                                                     (concat source-paths resource-paths deps)
-        ^IPersistentMap classes (compile classpath main-ns target-dir)
+        ^IPersistentMap classes (compile main-ns classpath target-dir compiler-opts)
         ^ISeq paths-to-lookup-resources                                     (into resource-paths (vals classes))
         ^IPersistentMap resources (copy-files paths-to-lookup-resources target-dir)
         ^ISeq libs                                                          (misc/filter-files (set/difference (set deps) (set paths-to-lookup-resources)))]
