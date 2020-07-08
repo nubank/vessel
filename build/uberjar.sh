@@ -16,7 +16,7 @@ echo "Compiling Vessel..."
 
 mkdir -p $classes_dir
 
-clojure -e "(binding [*compile-path* \"$classes_dir\"] (compile 'vessel.program))"
+clojure -e "(binding [*compile-path* \"$classes_dir\"] (compile 'vessel.executable))"
 
 echo "Extracting compiled dependencies into classes directory..."
 
@@ -32,7 +32,7 @@ done
 
 echo "Generating uberjar..."
 
-jar -cvfe vessel-$version.jar vessel.program .
+jar -cvfe vessel-$version.jar vessel.executable .
 
 cd ..; mv classes/vessel-$version.jar .
 
