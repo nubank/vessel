@@ -143,8 +143,8 @@
         {:layers/keys [cacheable hashes]}                   layering-data
         root-dir                                                   (root-directory app-root app-type)
         file-entry                                                 #:layer.entry{:source            (.getPath file-to-add)
-                                                                    :target            (.getPath (io/file root-dir (misc/relativize file-to-add (io/file target-dir))))
-                                                                    :modification-time fixed-modification-time}]
+                                                                                 :target            (.getPath (io/file root-dir (misc/relativize file-to-add (io/file target-dir))))
+                                                                                 :modification-time fixed-modification-time}]
     (update accumulator layer-id
             (fnil
              #(update % :layer/entries (partial cons file-entry))
@@ -184,10 +184,10 @@
   supplied manifest."
   [^IPersistentMap manifest]
   (let [{::v1/keys [extra-paths]} manifest]
-    (when extra-paths
+    (when (seq extra-paths)
       #:layer{:id                :extra-paths
               :origin            :file-entries
-              :nondeterministic? false
+              :cacheable false
               :entries           (map (fn [{:keys [from to preserve-permissions]}]
                                         (misc/assoc-some #:layer.entry{:source            (.getPath from)
                                                                        :target            (.getPath to)
@@ -217,7 +217,7 @@
   ""
   [^IPersistentMap build-plan ^IPersistentMap build-result]
   (apply merge
-         (keep (fn [{:layer/keys [digest hash id cacheable]}]
+         (keep (fn [{:layer/keys [cacheable, digest, hash, id]}]
                  (when cacheable
                    {id #:layer {:digest (or digest
                                             (get-in build-result [:application.layers/digests id]))
