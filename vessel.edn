@@ -1,0 +1,5 @@
+#:vessel.v1
+{   :from           "openjdk@sha256:1fd5a77d82536c88486e526da26ae79b6cd8a14006eb3da3a25eb8d2d682ccd6"
+ :target "nubank/vessel"
+ :source-paths #{"src"}
+ :main-ns vessel.executable}
