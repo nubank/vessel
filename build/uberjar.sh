@@ -30,6 +30,8 @@ for dep in "${deps[@]}"; do
     fi
 done
 
+rm META-INF/*.SF META-INF/*.RSA
+
 echo "Generating uberjar..."
 
 jar -cvfe vessel-$version.jar vessel.executable .
