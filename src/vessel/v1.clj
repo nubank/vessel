@@ -2,7 +2,7 @@
   "Specs for vessel v1 descriptor."
   (:require [clojure.java.io :as io]
             [clojure.spec.alpha :as s]
-            [clojure.test.check.generators :as gen])
+            [clojure.spec.gen.alpha :as gen])
   (:import java.io.File))
 
 ;; Manifest (e.g. vessel.edn).
