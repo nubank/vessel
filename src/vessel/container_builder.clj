@@ -66,7 +66,9 @@
   [^IPersistentMap manifest ^Sequential deps]
   (let [{::v1/keys [classifiers source-paths resource-paths]} manifest
         classified-deps                                       (classify-deps classifiers deps)
-        cacheable-layers                               (set (conj (keys classified-deps) :source-paths :resource-paths))
+        cacheable-layers                               (set (into (conj (keys classified-deps) :source-paths)
+                                                                  (when (seq (::v1/resource-paths manifest))
+                                                                    [:resource-paths])))
         files-to-be-layered                                   (into {:source-paths   source-paths
                                                                      :resource-paths resource-paths}
                                                                     classified-deps)
@@ -174,7 +176,7 @@
             (let [^Keyword layer-id (find-most-appropriate-layer files file-mapping)]
               (recur (first next-mappings)
                      (next next-mappings)
-                     (if (contains? cached-layers layer-id)
+                     (if (contains? cached-layer-ids layer-id)
                        ;; Skip this file because it belongs to a layer that has already been cached.
                        accumulator
                        (upsert-file-entry-layer accumulator manifest layering-data layer-id  (key file-mapping) target-dir))))))))))
