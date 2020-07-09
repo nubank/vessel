@@ -1,4 +1,4 @@
-(ns vessel.executable
+(ns vessel.main
   (:gen-class)
   (:require [clojure.java.io :as io]
             [vessel.cli :as cli]
@@ -73,3 +73,14 @@
 (defn -main
   [& args]
   (exit (cli/run vessel args)))
+
+;; Scratch
+
+(comment
+  (let [target (misc/make-empty-dir "target/scratch") ]
+    (containerize {:cache-dir (misc/make-dir (misc/home-dir) ".vessel-cache")
+                   :digest-path (io/file target "digest.txt")
+                   :image-reference-path (io/file target "image-reference.txt")
+                   :manifest-path (io/file "vessel.edn")
+                   :project-dir (io/file ".")
+                   :tar-path (io/file target "vessel.tar")})))
