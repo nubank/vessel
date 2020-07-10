@@ -126,60 +126,70 @@
               layer-id))
           files-to-be-layered)))
 
-(defn- ^File root-directory
-  "Resolves the root directory to copy application files to the container's file
-  system according to the desired root directory and application type."
-  [^File app-root ^Keyword app-type]
-  (case app-type
-    :jar app-root
-    :war (io/file app-root "WEB-INF")))
+(defn- distribute-files-across-respective-layers
+  [^IPersistentMap file-mappings ^IPersistentSet cached-layer-ids ^IPersistentMap files-to-lookup]
+  (loop [file-mapping  (first file-mappings)
+         next-mappings (next file-mappings)
+         distributed-files   {}]
+    (if-not file-mapping
+      distributed-files
+      (let [^Keyword layer-id (find-most-appropriate-layer files-to-lookup file-mapping)]
+        (recur (first next-mappings)
+               (next next-mappings)
+               (if (contains? cached-layer-ids layer-id)
+                 ;; Skip this file because it belongs to a layer that has already been cached.
+                 distributed-files
+                 (update distributed-files layer-id
+                         (partial cons (key file-mapping)))))))))
 
-(def ^:private fixed-modification-time
-  (Instant/ofEpochMilli 0))
+(defn- bundle-needed-files
+  ""
+  [^IPersistentMap files-to-be-layered ^File classes-dir]
+  (into {}
+        (map (fn [[^Keyword layer-id, ^Sequential files]]
+               (if (= layer-id :resource-paths)
+                 [layer-id files]
+                 (let [^File jar (io/file (.getParent classes-dir) (str (name layer-id) ".jar"))]
+                   [layer-id
+                    [(clojure.builder/bundle-up jar files classes-dir)]])))
+             files-to-be-layered)))
 
-(defn- upsert-file-entry-layer
-  "Creates or updates the file entries layer by adding the supplied file in the
-  correct path inside the container."
-  [^IPersistentMap accumulator ^IPersistentMap manifest ^IPersistentMap layering-data ^Keyword layer-id ^File file-to-add ^File target-dir]
+(defn- ^File resolve-path-in-container
+  ""
+  [^IPersistentMap manifest ^Keyword layer-id ^File classes-dir ^File file-to-add]
   (let [{::v1/keys [app-root, app-type]} manifest
-        {:layers/keys [cacheable hashes]}                   layering-data
-        root-dir                                                   (root-directory app-root app-type)
-        file-entry                                                 #:layer.entry{:source            (.getPath file-to-add)
-                                                                                 :target            (.getPath (io/file root-dir (misc/relativize file-to-add (io/file target-dir))))
-                                                                                 :modification-time fixed-modification-time}]
-    (update accumulator layer-id
-            (fnil
-             #(update % :layer/entries (partial cons file-entry))
-             #:layer{:id                layer-id
-                     :origin            :file-entries
-                     :cacheable (contains? cacheable layer-id)
-                     :hash              (get hashes layer-id)
-                     :entries           []}))))
+        root-dir (case app-type
+                   :jar app-root
+                   :war (io/file app-root "WEB-INF"))]
+    (if (= layer-id :resource-paths)
+      (io/file root-dir "classes" (misc/relativize file-to-add classes-dir))
+      (io/file app-root "lib" (misc/relativize file-to-add (.getParent classes-dir))))))
+
+(defn- make-file-entries-layer
+  [^IPersistentMap manifest ^IPersistentMap layering-data [^Keyword layer-id ^Sequential files-to-be-layered] ^File classes-dir]
+  (let [{:layers/keys [cacheable, hashes]}                   layering-data]
+    #:layer{:id layer-id
+            :origin :file-entries
+            :cacheable true
+            :hash (get hashes layer-id)
+            :entries (map (fn [^File file-to-add]
+                            #:layer.entry                         {:source            (.getPath file-to-add)
+                                                                   :target            (.getPath (resolve-path-in-container manifest layer-id classes-dir file-to-add))
+                                                                   :modification-time (Instant/ofEpochMilli 0)})
+                          files-to-be-layered)}))
 
 (defn- make-file-entries-layers
-  "Returns remaining file entries layers when applicable, arranging all application files in the most appropriate layers.
-
-  "
   [^IPersistentMap manifest ^Sequential deps ^IPersistentMap layering-data ^Sequential cached-layers]
   (let [{:layers/keys [cacheable, files]} layering-data
         cached-layer-ids                        (set (map :layer/id cached-layers))]
     (when-not (= cached-layer-ids cacheable)
       (let [{::v1/keys [id]} manifest
-            target-dir (misc/make-empty-dir "/tmp/vessel" id)
-            {:clojure.application/keys [classes, lib]} (clojure.builder/build-application manifest deps target-dir)
-            file-mappings                             (into classes lib)]
-        (loop [file-mapping  (first file-mappings)
-               next-mappings (next file-mappings)
-               accumulator   {}]
-          (if-not file-mapping
-            (vals accumulator)
-            (let [^Keyword layer-id (find-most-appropriate-layer files file-mapping)]
-              (recur (first next-mappings)
-                     (next next-mappings)
-                     (if (contains? cached-layer-ids layer-id)
-                       ;; Skip this file because it belongs to a layer that has already been cached.
-                       accumulator
-                       (upsert-file-entry-layer accumulator manifest layering-data layer-id  (key file-mapping) target-dir))))))))))
+            ^File classes-dir (misc/make-empty-dir "/tmp/vessel" id "classes")
+            ^IPersistentMap file-mappings (clojure.builder/build-application manifest deps classes-dir)
+            ^IPersistentMap distributed-files (distribute-files-across-respective-layers file-mappings cached-layer-ids files)
+            ^IPersistentMap files-to-be-layered (bundle-needed-files distributed-files classes-dir)]
+        (map #(make-file-entries-layer manifest layering-data % classes-dir)
+             files-to-be-layered)))))
 
 (defn- ^IPersistentMap make-extra-paths-layer
   "Returns a layer map representing extra paths possibly declared in the

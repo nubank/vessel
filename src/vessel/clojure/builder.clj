@@ -277,14 +277,15 @@
     (write-bytes jar-stream file-to-write)
     (.closeEntry jar-stream)))
 
-(defn bundle-up
+(defn ^File bundle-up
   ""
   [^File jar-path ^Sequential files-to-be-bundled ^File base-dir]
   (with-open [jar-stream (JarOutputStream. (BufferedOutputStream. (FileOutputStream. jar-path)))]
     (loop [files files-to-be-bundled]
       (let [^File next-entry (first files)]
         (if-not next-entry
-          (.finish jar-stream)
+          (do (.finish jar-stream)
+              jar-path)
           (do
             (write-jar-entry jar-stream next-entry base-dir)
             (recur (next files))))))))
