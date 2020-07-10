@@ -3,16 +3,17 @@
   (:refer-clojure :exclude [compile])
   (:require [clojure.java.classpath :as java.classpath]
             [clojure.java.io :as io]
-            [clojure.set :as set]
             [clojure.string :as string]
+            [clojure.tools.namespace.file :as namespace.file]
             [clojure.tools.namespace.find :as namespace.find]
             [spinner.core :as spinner]
             [vessel.misc :as misc]
             [vessel.v1 :as v1])
   (:import [clojure.lang IPersistentMap ISeq Sequential Symbol]
-           [java.io File InputStream]
+           [java.io BufferedInputStream BufferedOutputStream File FileInputStream FileOutputStream InputStream]
            [java.net URL URLClassLoader]
-           [java.util.jar JarEntry JarFile]))
+           java.nio.file.attribute.FileTime
+           [java.util.jar JarEntry JarFile JarOutputStream]))
 
 (defn- ^Symbol parent-ns
   "Given a ns symbol, returns its parent, that's to say, the same ns without its last segment.
@@ -119,28 +120,12 @@
   on the classpath."
   [^Symbol main-ns ^Sequential classpath ^File target-dir ^IPersistentMap compiler-opts]
   (let [namespaces  (find-namespaces-on-classpath classpath)
-        classes-dir (misc/make-dir target-dir "classes")
-        _           (compile* main-ns classpath classes-dir compiler-opts)]
+        _           (compile* main-ns classpath target-dir compiler-opts)]
     (reduce (fn [result ^File class-file]
               (assoc result class-file
-                     (get-class-file-source namespaces (misc/relativize class-file classes-dir))))
+                     (get-class-file-source namespaces (misc/relativize class-file target-dir))))
             {}
-            (misc/filter-files (file-seq classes-dir)))))
-
-(defn copy-libs
-  "Copies libraries that don't contain Clojure sources or that aren't directly
-  referenced by the the application being built to the directory lib under the
-  target dir.
-
-  Returns a map of java.io.File to java.io.File mapping the target location of
-  each library to its source."
-  [libs ^File target-dir]
-  (let [lib-dir (misc/make-dir target-dir "lib")]
-    (reduce (fn                                                                                                                          [result ^File lib]
-              (let [^File dest-file (io/file lib-dir (.getName lib))]
-                (io/copy lib dest-file)
-                (assoc result dest-file lib)))
-            {} libs)))
+            (misc/filter-files (file-seq target-dir)))))
 
 (defn- merge-data-readers
   [^InputStream src ^File target]
@@ -150,19 +135,34 @@
          pr-str
          (spit target))))
 
+(defn- data-readers-file?
+  "Returns true if the java.io.File object represents a Clojure data-readers
+  (data_readers.clj or data_readers.cljc)."
+  [^File file]
+  (re-find #"^data_readers\.cljc?$"
+           (.getPath file)))
+
+(defn- clojure-file?
+  "Returns true if the java.io.File object represents a Clojure source file."
+  [^File file]
+  (let [^String file-name (.getName file)]
+    (some #(string/ends-with? file-name %)
+          namespace.file/clojure-extensions)))
+
 (defn- ^File copy
-  "Copies src to target and returns the later one.
+  "Copies source to target and returns it (the target file).
 
   Gives a special treatment to data-readers, by merging multiple ones
   into their respective files (data_readers.clj or
   data_readers.cljc)."
-  [^InputStream src ^File target ^File base-dir]
-  (let [file-path (.getPath (misc/relativize target base-dir))]
-    (if (re-find #"^data_readers\.cljc?$" file-path)
-      (merge-data-readers src target)
+  [^InputStream source ^File target ^File base-dir]
+  (when (or (data-readers-file? target)
+            (not (clojure-file? target)))
+    (if (data-readers-file? target)
+      (merge-data-readers source target)
       (do (io/make-parents target)
-          (io/copy src target)))
-    target))
+          (io/copy source target)
+          target))))
 
 (defn- copy-files-from-jar
   "Copies files from within the jar file to the target directory."
@@ -200,21 +200,19 @@
   files.
 
   Returns a map of target files to their sources."
-  [classpath ^File target-dir]
-  (let [classes-dir (misc/make-dir target-dir "classes")]
-    (->> classpath
-         (mapcat #(map vector (remove nil? (copy-files* % classes-dir)) (repeat %)))
-         (into {}))))
+  [^ISeq classpath ^File target-dir]
+  (->> classpath
+       (mapcat #(map vector (remove nil? (copy-files* % target-dir)) (repeat %)))
+       (into {})))
 
 (defn ^IPersistentMap build-application
   "Builds a Clojure application.
 
   Compiles ahead-of-time (AOT) all Clojure sources present in the application's
   classpath that the supplied main ns depends on. Writes resulting .class files
-  to the directory classes under the supplied target directory along with any
-  resource files found in the classpath. Also copies remaining libraries (jar
-  files) referenced by the application in question to the directory lib under
-  the supplied target directory.
+  to the supplied target directory along with any resource files found in the
+  classpath. Also copies other files from within the libraries (jar files)
+  referenced by the application in question to the same location.
 
   Manifest is a persistent map as spec'ed by :vessel.v1/manifest. The following
   keys are specially meaningful:
@@ -243,19 +241,51 @@
   Target-dir is a java.io.File object representing the directory to write
   compiled classes and libraries to.
 
-  Returns a persistent map containing two keys: :clojure.application/classes and
-  :clojure.application/lib. They are maps of java.io.File to java.io.File
-  objects mapping target files to their sources. This data structure aims Vessel
-  to determine which files belong to each application layer during the
-  containerization process.
+  Returns a persistent map of java.io.File to java.io.File objects mapping
+  target files to their sources. This data structure aims Vessel to determine
+  which files belong to each application layer during the containerization
+  process.
 
   See also: vessel.clojure.classpath and vessel.reader."
   [^IPersistentMap manifest ^Sequential deps ^File target-dir]
   (let [{::v1/keys [compiler-opts, main-ns, resource-paths, source-paths]} manifest
         ^ISeq classpath                                                     (concat source-paths resource-paths deps)
         ^IPersistentMap classes (compile main-ns classpath target-dir compiler-opts)
-        ^ISeq paths-to-lookup-resources                                     (into resource-paths (vals classes))
-        ^IPersistentMap resources (copy-files paths-to-lookup-resources target-dir)
-        ^ISeq libs                                                          (misc/filter-files (set/difference (set deps) (set paths-to-lookup-resources)))]
-    #:clojure.application{:classes (merge classes resources)
-                          :lib     (copy-libs libs target-dir)}))
+        ^ISeq paths-to-lookup-remaining-files (into resource-paths deps)
+        ^IPersistentMap remaining-files (copy-files paths-to-lookup-remaining-files target-dir)]
+    (merge classes remaining-files)))
+
+(defn- write-bytes
+  "Writes the content of the supplied file to the jar file being created."
+  [^JarOutputStream jar-stream ^File file-to-write]
+  (let [input (BufferedInputStream. (FileInputStream. file-to-write))
+        buffer (byte-array 1024)]
+    (loop []
+      (let [count (.read input buffer)]
+        (when-not (< count 0)
+          (.write jar-stream buffer 0 count))))))
+
+(defn- write-jar-entry
+  "Writes the supplied file to the jar being created. The base-dir is used to
+  properly resolve the path of the jar entry within the jar file."
+  [^JarOutputStream jar-stream ^File file-to-write ^File base-dir]
+  (let [^String path-within-jar (.getPath (misc/relativize file-to-write base-dir))
+        ^JarEntry jar-entry (JarEntry. path-within-jar)]
+    (.setLastModifiedTime jar-entry
+                          (FileTime/from (misc/last-modified-time file-to-write)))
+    (.putNextEntry jar-stream jar-entry)
+    (write-bytes jar-stream file-to-write)
+    (.closeEntry jar-stream)))
+
+(defn ^File bundle-up
+  ""
+  [^File jar-path ^Sequential files-to-be-bundled ^File base-dir]
+  (with-open [jar-stream (JarOutputStream. (BufferedOutputStream. (FileOutputStream. jar-path)))]
+    (loop [files files-to-be-bundled]
+      (let [^File next-entry (first files)]
+        (if-not next-entry
+          (do (.finish jar-stream)
+              jar-path)
+          (do
+            (write-jar-entry jar-stream next-entry base-dir)
+            (recur (next files))))))))
