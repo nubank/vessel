@@ -149,7 +149,7 @@
         (map (fn [[^Keyword layer-id, ^Sequential files]]
                (if (= layer-id :resource-paths)
                  [layer-id files]
-                 (let [^File jar (io/file (.getParent classes-dir) (str (name layer-id) ".jar"))]
+                 (let [^File jar (io/file (.getParentFile classes-dir) (str (name layer-id) ".jar"))]
                    [layer-id
                     [(clojure.builder/bundle-up jar files classes-dir)]])))
              files-to-be-layered)))
@@ -163,7 +163,7 @@
                    :war (io/file app-root "WEB-INF"))]
     (if (= layer-id :resource-paths)
       (io/file root-dir "classes" (misc/relativize file-to-add classes-dir))
-      (io/file app-root "lib" (misc/relativize file-to-add (.getParent classes-dir))))))
+      (io/file root-dir "lib" (misc/relativize file-to-add (.getParentFile classes-dir))))))
 
 (defn- make-file-entries-layer
   [^IPersistentMap manifest ^IPersistentMap layering-data [^Keyword layer-id ^Sequential files-to-be-layered] ^File classes-dir]
@@ -203,14 +203,14 @@
               :entries           (map (fn [{:keys [from to preserve-permissions]}]
                                         (misc/assoc-some #:layer.entry{:source            (.getPath from)
                                                                        :target            (.getPath to)
-                                                                       :modification-time fixed-modification-time}
+                                                                       :modification-time (Instant/ofEpochMilli 0)}
                                                          :layer.entry/file-permissions (when preserve-permissions
                                                                                          (misc/posix-file-permissions from))))
                                       extra-paths)})))
 
 (defn make-build-plan
   [^IPersistentMap manifest ^IPersistentMap options]
-  (let [{::v1/keys [from target]} manifest
+  (let [{::v1/keys [from, target]} manifest
         {:keys [project-dir]}     options
         deps                      (resolve-deps project-dir)
         layering-data             (construct-layering-data manifest deps)
