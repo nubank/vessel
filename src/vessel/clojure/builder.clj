@@ -154,8 +154,8 @@
   [^File file ^IPersistentSet exclusions]
   (or (data-readers-file? file)
       (not (clojure-file? file)))
-  (some #(not (re-find % (.getPath file)))
-        exclusions))
+  (every? #(not (re-find % (.getPath file)))
+          exclusions))
 
 (defn- ^File copy
   "Copies source to target and returns it (the target file).
@@ -164,8 +164,7 @@
   into their respective files (data_readers.clj or
   data_readers.cljc)."
   [^InputStream source ^File target ^File base-dir ^IPersistentSet exclusions]
-  (when (or (data-readers-file? target)
-            (not (clojure-file? target)))
+  (when (includes? target)
     (if (data-readers-file? target)
       (merge-data-readers source target)
       (do (io/make-parents target)
