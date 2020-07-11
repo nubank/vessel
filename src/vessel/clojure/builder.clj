@@ -65,7 +65,7 @@
   (into-array Object [(into-array String
                                   ["-e"
                                    (pr-str
-                                    `(binding [*compile-path* ~(.getPath target-dir)
+                                    `(binding [*compile-path*     ~(.getPath target-dir)
                                                *compiler-options* ~compiler-opts]
                                        (clojure.core/compile
                                         (symbol ~(name main-ns)))))])]))
@@ -119,8 +119,8 @@
   sources (instances of java.io.File too) representing directories or jar files
   on the classpath."
   [^Symbol main-ns ^Sequential classpath ^File target-dir ^IPersistentMap compiler-opts]
-  (let [namespaces  (find-namespaces-on-classpath classpath)
-        _           (compile* main-ns classpath target-dir compiler-opts)]
+  (let [namespaces (find-namespaces-on-classpath classpath)
+        _          (compile* main-ns classpath target-dir compiler-opts)]
     (reduce (fn [result ^File class-file]
               (assoc result class-file
                      (get-class-file-source namespaces (misc/relativize class-file target-dir))))
@@ -164,7 +164,7 @@
   into their respective files (data_readers.clj or
   data_readers.cljc)."
   [^InputStream source ^File target ^File base-dir ^IPersistentSet exclusions]
-  (when (includes? target)
+  (when (includes? target exclusions)
     (if (data-readers-file? target)
       (merge-data-readers source target)
       (do (io/make-parents target)
@@ -261,16 +261,16 @@
   See also: vessel.clojure.classpath and vessel.reader."
   [^IPersistentMap manifest ^Sequential deps ^File target-dir]
   (let [{::v1/keys [compiler-opts, exclusions, main-ns, resource-paths, source-paths]} manifest
-        ^ISeq classpath                                                     (concat source-paths resource-paths deps)
-        ^IPersistentMap classes (compile main-ns classpath target-dir compiler-opts)
-        ^ISeq paths-to-lookup-remaining-files (into resource-paths deps)
-        ^IPersistentMap remaining-files (copy-files paths-to-lookup-remaining-files target-dir exclusions)]
+        ^ISeq classpath                                                                (concat source-paths resource-paths deps)
+        ^IPersistentMap classes                                                        (compile main-ns classpath target-dir compiler-opts)
+        ^ISeq paths-to-lookup-remaining-files                                          (into resource-paths deps)
+        ^IPersistentMap remaining-files                                                (copy-files paths-to-lookup-remaining-files target-dir exclusions)]
     (merge classes remaining-files)))
 
 (defn- write-bytes
   "Writes the content of the supplied file to the jar file being created."
   [^JarOutputStream jar-stream ^File file]
-  (let [input (BufferedInputStream. (FileInputStream. file))
+  (let [input  (BufferedInputStream. (FileInputStream. file))
         buffer (byte-array 1024)]
     (loop []
       (let [count (.read input buffer)]
