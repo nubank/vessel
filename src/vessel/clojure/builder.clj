@@ -36,7 +36,7 @@
         (string/replace "_" "-")
         symbol)))
 
-(defn ^File get-class-file-source
+(defn- ^File get-class-file-source
   "Given a map of ns symbols to their sources (either directories or jar files
   on the classpath) and a file representing a compiled class, returns the source
   where the class in question comes from.
@@ -199,7 +199,7 @@
     (copy-files-from-dir source target-dir exclusions)
     (copy-files-from-jar source target-dir exclusions)))
 
-(defn copy-files
+(defn- copy-files
   "Iterates over the files (typically directories and jar files) by
   copying their content to the target directory. Data
   readers (declared in data_readers.clj or data_readers.cljc in the
