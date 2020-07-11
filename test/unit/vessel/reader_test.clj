@@ -90,7 +90,8 @@
                     :extra-paths    [{:from "scripts/clj-tool.sh"
                                       :to   "/usr/local/bin/clj-tool"}]
                     :main-ns        'nubank.clj-tool.executor
-                    :classifiers    {:nubank-libs "nubank"}})
+                    :classifiers    {:nubank-libs "nubank"}
+                    :exclusions     #{"\\.rsa$"}})
 
 (deftest read-manifest-test
   (let [manifest-file (io/file "vessel.edn")]
@@ -116,7 +117,8 @@
                                    [{:from
                                      (io/file "/workspace/scripts/clj-tool.sh")
                                      :to (io/file "/usr/local/bin/clj-tool")}]
-                                   :classifiers  {:nubank-libs (partial instance? java.util.regex.Pattern)}}
+                                   :classifiers  {:nubank-libs (partial instance? java.util.regex.Pattern)}
+                                   :exclusions   #{(partial instance? java.util.regex.Pattern)}}
                              (reader/read-manifest manifest-file))))
 
                (testing "expands variables by using supplied build-time-variables"
@@ -184,4 +186,11 @@
                              (update-in manifest [::v1/classifiers :nubank-libs] (constantly "*"))]
                             (is (thrown-with-msg? clojure.lang.ExceptionInfo
                                                   #"Invalid regex \* at \[:vessel.v1/classifiers :nubank-libs\]"
+                                                  (reader/read-manifest manifest-file)))))
+
+               (testing "exclusions must contain valid regexes"
+                 (providing [(misc/read-edn manifest-file)
+                             (assoc manifest ::v1/exclusions #{"*"})]
+                            (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                                                  #"Invalid regex \* at :vessel.v1/exclusions"
                                                   (reader/read-manifest manifest-file))))))))

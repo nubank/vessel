@@ -257,24 +257,25 @@
 
 (defn- write-bytes
   "Writes the content of the supplied file to the jar file being created."
-  [^JarOutputStream jar-stream ^File file-to-write]
-  (let [input (BufferedInputStream. (FileInputStream. file-to-write))
+  [^JarOutputStream jar-stream ^File file]
+  (let [input (BufferedInputStream. (FileInputStream. file))
         buffer (byte-array 1024)]
     (loop []
       (let [count (.read input buffer)]
         (when-not (< count 0)
-          (.write jar-stream buffer 0 count))))))
+          (.write jar-stream buffer 0 count)
+          (recur))))))
 
-(defn- write-jar-entry
+(defn- add-jar-entry
   "Writes the supplied file to the jar being created. The base-dir is used to
   properly resolve the path of the jar entry within the jar file."
-  [^JarOutputStream jar-stream ^File file-to-write ^File base-dir]
-  (let [^String path-within-jar (.getPath (misc/relativize file-to-write base-dir))
-        ^JarEntry jar-entry (JarEntry. path-within-jar)]
+  [^JarOutputStream jar-stream ^File file-to-add ^File base-dir]
+  (let [^String path-in-jar (.getPath (misc/relativize file-to-add base-dir))
+        ^JarEntry jar-entry (JarEntry. path-in-jar)]
     (.setLastModifiedTime jar-entry
-                          (FileTime/from (misc/last-modified-time file-to-write)))
+                          (FileTime/from (misc/last-modified-time file-to-add)))
     (.putNextEntry jar-stream jar-entry)
-    (write-bytes jar-stream file-to-write)
+    (write-bytes jar-stream file-to-add)
     (.closeEntry jar-stream)))
 
 (defn ^File bundle-up
@@ -287,5 +288,5 @@
           (do (.finish jar-stream)
               jar-path)
           (do
-            (write-jar-entry jar-stream next-entry base-dir)
+            (add-jar-entry jar-stream next-entry base-dir)
             (recur (next files))))))))
