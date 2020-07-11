@@ -140,7 +140,7 @@ Did you forget to pass --build-arg %s=<value> to Vessel?"
   "Takes a string x and turns it into a java.util.regex.Pattern. Throws an
   exception with a meaningful message if the string doesn't represent a valid
   Java regex."
-  [^IPersistentVector path ^String x]
+  [path ^String x]
   (try
     (re-pattern x)
     (catch java.util.regex.PatternSyntaxException e
@@ -160,7 +160,8 @@ Did you forget to pass --build-arg %s=<value> to Vessel?"
                                       %))
       (update ::v1/classifiers #(into {} (map (fn [[k v]]
                                                 [k (ensure-regex [::v1/classifiers k] v)])
-                                              %)))))
+                                              %)))
+      (update ::v1/exclusions #(into #{} (map (partial ensure-regex ::v1/exclusions) %)))))
 
 (defn ^IPersistentMap read-manifest
   "Reads, validates and parses a Vessel manifest.

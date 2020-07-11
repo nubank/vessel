@@ -36,6 +36,8 @@
 
 (s/def ::compiler-opts (s/map-of keyword? any?))
 
+(s/def ::exclusions (s/coll-of string? :kind set? :min-count 1))
+
 (s/def ::labels (s/map-of string? string?))
 
 (s/def ::user string?)
