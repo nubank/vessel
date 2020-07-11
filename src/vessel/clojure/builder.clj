@@ -9,7 +9,7 @@
             [spinner.core :as spinner]
             [vessel.misc :as misc]
             [vessel.v1 :as v1])
-  (:import [clojure.lang IPersistentMap ISeq Sequential Symbol]
+  (:import [clojure.lang IPersistentMap IPersistentSet ISeq Sequential Symbol]
            [java.io BufferedInputStream BufferedOutputStream File FileInputStream FileOutputStream InputStream]
            [java.net URL URLClassLoader]
            java.nio.file.attribute.FileTime
@@ -149,13 +149,21 @@
     (some #(string/ends-with? file-name %)
           namespace.file/clojure-extensions)))
 
+(defn- includes?
+  "Whether or not the java.io.File object in question must be included"
+  [^File file ^IPersistentSet exclusions]
+  (or (data-readers-file? file)
+      (not (clojure-file? file)))
+  (some #(not (re-find % (.getPath file)))
+        exclusions))
+
 (defn- ^File copy
   "Copies source to target and returns it (the target file).
 
   Gives a special treatment to data-readers, by merging multiple ones
   into their respective files (data_readers.clj or
   data_readers.cljc)."
-  [^InputStream source ^File target ^File base-dir]
+  [^InputStream source ^File target ^File base-dir ^IPersistentSet exclusions]
   (when (or (data-readers-file? target)
             (not (clojure-file? target)))
     (if (data-readers-file? target)
@@ -166,7 +174,7 @@
 
 (defn- copy-files-from-jar
   "Copies files from within the jar file to the target directory."
-  [^File jar ^File target-dir]
+  [^File jar ^File target-dir ^IPersistentSet exclusions]
   (with-open [jar-file (JarFile. jar)]
     (->> jar-file
          .entries
@@ -174,23 +182,23 @@
          (mapv (fn [^JarEntry jar-entry]
                  (let [^File target-file (io/file target-dir (.getName jar-entry))]
                    (when-not (.isDirectory jar-entry)
-                     (copy (.getInputStream jar-file jar-entry) target-file target-dir))))))))
+                     (copy (.getInputStream jar-file jar-entry) target-file target-dir exclusions))))))))
 
 (defn- copy-files-from-dir
   "Copies files (typically resources) from source to target."
-  [^File src ^File target-dir]
-  (->> src
+  [^File source ^File target-dir ^IPersistentSet exclusions]
+  (->> source
        file-seq
        misc/filter-files
        (mapv (fn [^File file]
-               (let [target-file (io/file target-dir (misc/relativize file src))]
-                 (copy (io/input-stream file) target-file target-dir))))))
+               (let [target-file (io/file target-dir (misc/relativize file source))]
+                 (copy (io/input-stream file) target-file target-dir exclusions))))))
 
 (defn- copy-files*
-  [^File src ^File target-dir]
-  (if (.isDirectory src)
-    (copy-files-from-dir src target-dir)
-    (copy-files-from-jar src target-dir)))
+  [^File source ^File target-dir ^IPersistentSet exclusions]
+  (if (.isDirectory source)
+    (copy-files-from-dir source target-dir exclusions)
+    (copy-files-from-jar source target-dir exclusions)))
 
 (defn copy-files
   "Iterates over the files (typically directories and jar files) by
@@ -200,9 +208,9 @@
   files.
 
   Returns a map of target files to their sources."
-  [^ISeq classpath ^File target-dir]
+  [^ISeq classpath ^File target-dir ^IPersistentSet exclusions]
   (->> classpath
-       (mapcat #(map vector (remove nil? (copy-files* % target-dir)) (repeat %)))
+       (mapcat #(map vector (remove nil? (copy-files* % target-dir exclusions)) (repeat %)))
        (into {})))
 
 (defn ^IPersistentMap build-application
@@ -221,6 +229,11 @@
 
   A map containing the flags accepted by Clojure compiler. For further details,
   refer to: https://clojure.org/reference/compilation.
+
+  :exclusions set of java.util.regex.Pattern
+
+  A set of regexes to match files against. Matching files will be
+  excluded from the final artifact built.
 
   :main-ns Symbol
 
@@ -242,17 +255,17 @@
   compiled classes and libraries to.
 
   Returns a persistent map of java.io.File to java.io.File objects mapping
-  target files to their sources. This data structure aims Vessel to determine
+  target files to their sources. This data structure aids Vessel to determine
   which files belong to each application layer during the containerization
   process.
 
   See also: vessel.clojure.classpath and vessel.reader."
   [^IPersistentMap manifest ^Sequential deps ^File target-dir]
-  (let [{::v1/keys [compiler-opts, main-ns, resource-paths, source-paths]} manifest
+  (let [{::v1/keys [compiler-opts, exclusions, main-ns, resource-paths, source-paths]} manifest
         ^ISeq classpath                                                     (concat source-paths resource-paths deps)
         ^IPersistentMap classes (compile main-ns classpath target-dir compiler-opts)
         ^ISeq paths-to-lookup-remaining-files (into resource-paths deps)
-        ^IPersistentMap remaining-files (copy-files paths-to-lookup-remaining-files target-dir)]
+        ^IPersistentMap remaining-files (copy-files paths-to-lookup-remaining-files target-dir exclusions)]
     (merge classes remaining-files)))
 
 (defn- write-bytes
