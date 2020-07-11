@@ -5,4 +5,5 @@
  :source-paths #{"src"}
  :extra-paths [{:from "scripts/entrypoint.sh"
                 :to "/usr/local/bin/vessel"
-                :preserve-permissions true}]}
+                :preserve-permissions true}]
+ :exclusions #{"META-INF/[^\\.]+\\.(RSA)|(SF)$"}}
