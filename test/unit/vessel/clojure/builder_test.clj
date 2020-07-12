@@ -32,12 +32,12 @@
                    (#'builder/get-class-file-source namespace (io/file "clojure/zip$zipper.class")))))))
 
 (deftest copy-files-test
-  (let [source    (io/file "test/resources")
+  (let [source (io/file "test/resources")
         target (io/file "target/tests/builder-test/copy-files-test")
         output (#'builder/copy-files [(io/file source "lib1")
-                                     (io/file source "lib2")
-                                     (io/file source "lib3/lib3.jar")
-                                     (io/file source "lib4")]
+                                      (io/file source "lib2")
+                                      (io/file source "lib3/lib3.jar")
+                                      (io/file source "lib4")]
                                      target
                                      #{})]
 
@@ -78,32 +78,29 @@
 
 (deftest build-application-test
   (let [project-dir  (io/file "test/resources/my-app")
-        target-dir   (io/file "target/tests/builder-test/build-application-test")
+        target-dir   (misc/make-empty-dir (io/file "target/tests/builder-test/build-application-test/classes"))
         deps         (classpath/assemble-deps {:clojure/tool :tools.deps.alpha :project/descriptor (io/file project-dir "deps.edn")})
-        manifest      #::v1{:main-ns        'my-app.server
+        manifest     #::v1 {:main-ns        'my-app.server
                             :source-paths   #{(io/file project-dir "src")}
                             :resource-paths #{(io/file project-dir "resources")}}
         build-result (builder/build-application manifest deps target-dir)]
 
-    (testing "the target directory contains the expected directories and files"
-      (is (match? (m/in-any-order ["clojure"
-                                   "META-INF"
-                                   "my_app"
-                                   "resource1.edn"])
+    (testing "the target directory contains some of the expected directories and files"
+      (is (match? (m/embeds ["clojure"
+                             "javax"
+                             "my_app"
+                             "org"
+                             "about.html"
+                             "resource1.edn"])
                   (get-file-names target-dir))))
 
     (testing "the directory my_app contains the expected files"
       (is (match? (m/embeds ["server.class"
                              "server__init.class"
-                             "server$_main.class"
-                             ])
-                  (get-file-names target-dir))))
+                             "server$_main.class"])
+                  (get-file-names (io/file target-dir "my_app")))))
 
     (testing "the keys of the build-result map match all files created in the
     target directory"
       (is (= (set (misc/filter-files (file-seq target-dir)))
-             (set (keys build-result)))))
-
-
-
-    ))
+             (set (keys build-result)))))))

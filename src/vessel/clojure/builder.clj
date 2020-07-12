@@ -137,7 +137,7 @@
 
 (defn- data-readers-file?
   "Returns true if the java.io.File object represents a Clojure data-readers
-  (data_readers.clj or data_readers.cljc)."
+  file (data_readers.clj or data_readers.cljc)."
   [^File file]
   (re-find #"^data_readers\.cljc?$"
            (.getPath file)))
@@ -168,8 +168,8 @@
     (if (data-readers-file? target)
       (merge-data-readers source target)
       (do (io/make-parents target)
-          (io/copy source target)
-          target))))
+          (io/copy source target)))
+    target))
 
 (defn- copy-files-from-jar
   "Copies files from within the jar file to the target directory."
