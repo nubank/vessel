@@ -128,8 +128,8 @@
             (misc/filter-files (file-seq target-dir)))))
 
 (defn- merge-data-readers
-  [^InputStream src ^File target]
-  (let [new-data-readers (misc/read-edn src)
+  [^InputStream source ^File target]
+  (let [new-data-readers (misc/read-edn source)
         old-data-readers (when (misc/file-exists? target) (misc/read-edn target))]
     (->> (merge old-data-readers new-data-readers)
          pr-str
@@ -140,7 +140,7 @@
   file (data_readers.clj or data_readers.cljc)."
   [^File file]
   (re-find #"^data_readers\.cljc?$"
-           (.getPath file)))
+           (.getName file)))
 
 (defn- clojure-file?
   "Returns true if the java.io.File object represents a Clojure source file."
@@ -165,10 +165,10 @@
   data_readers.cljc)."
   [^InputStream source ^File target ^File base-dir ^IPersistentSet exclusions]
   (when (includes? target exclusions)
+    (io/make-parents target)
     (if (data-readers-file? target)
       (merge-data-readers source target)
-      (do (io/make-parents target)
-          (io/copy source target)))
+      (io/copy source target))
     target))
 
 (defn- copy-files-from-jar
@@ -199,7 +199,7 @@
     (copy-files-from-dir source target-dir exclusions)
     (copy-files-from-jar source target-dir exclusions)))
 
-(defn- copy-files
+(defn- ^IPersistentMap copy-files
   "Iterates over the files (typically directories and jar files) by
   copying their content to the target directory. Data
   readers (declared in data_readers.clj or data_readers.cljc in the
@@ -263,8 +263,7 @@
   (let [{::v1/keys [compiler-opts, exclusions, main-ns, resource-paths, source-paths]} manifest
         ^ISeq classpath                                                                (concat source-paths resource-paths deps)
         ^IPersistentMap classes                                                        (compile main-ns classpath target-dir compiler-opts)
-        ^ISeq paths-to-lookup-remaining-files                                          (into resource-paths deps)
-        ^IPersistentMap remaining-files                                                (copy-files paths-to-lookup-remaining-files target-dir exclusions)]
+        ^IPersistentMap remaining-files                                                (copy-files classpath target-dir exclusions)]
     (merge classes remaining-files)))
 
 (defn- write-bytes
