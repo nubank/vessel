@@ -13,7 +13,7 @@
            [java.io BufferedInputStream BufferedOutputStream ByteArrayInputStream File FileInputStream FileOutputStream InputStream]
            [java.net URL URLClassLoader]
            java.nio.file.attribute.FileTime
-           [java.util.jar JarEntry JarFile JarOutputStream]))
+           [java.util.jar JarEntry JarFile JarOutputStream Manifest]))
 
 (defn- ^Symbol parent-ns
   "Given a ns symbol, returns its parent, that's to say, the same ns without its last segment.
@@ -296,7 +296,7 @@
     (write-bytes jar-stream file-to-add)
     (.closeEntry jar-stream)))
 
-(defn- ^InputStream generate-java-manifest
+(defn- ^Manifest generate-java-manifest
   ""
   [^Symbol main-ns]
   (letfn [(ns->class-name [^Symbol ns]
@@ -306,7 +306,8 @@
                  (remove nil?)
                  (string/join (System/lineSeparator))
                  .getBytes
-                 ByteArrayInputStream.))]
+                 ByteArrayInputStream.
+                 Manifest.))]
     (render
      ["Manifest-Version: 1.0"
       "Created-By: Vessel"
