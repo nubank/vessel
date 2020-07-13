@@ -2,6 +2,7 @@
   "Builder for Clojure applications."
   (:refer-clojure :exclude [compile])
   (:require [clojure.java.classpath :as java.classpath]
+            [vessel.sh :as sh]
             [clojure.java.io :as io]
             [clojure.string :as string]
             [clojure.tools.namespace.file :as namespace.file]
@@ -50,47 +51,25 @@
         (get namespaces (parent-ns ns))
         (throw (IllegalStateException. (str "Unknown source for .class file " class-file))))))
 
-(defn- rethrow-compilation-error
-  "Unwrap the actual compilation exception and rethrow it as an
-  ExceptionInfo that will be properly handled by Vessel."
-  [^Symbol main-ns throwable]
-  (throw (ex-info (str "Failed to compile " main-ns)
-                  #:vessel.error{:category  :vessel/compilation-error
-                                 :throwable (ex-cause (ex-cause throwable))})))
-
-(defn- main-args
-  "Returns a Java array containing the arguments to be passed to
-  clojure.main/-main function."
-  [^Symbol main-ns ^File target-dir ^IPersistentMap compiler-opts]
-  (into-array Object [(into-array String
-                                  ["-e"
-                                   (pr-str
-                                    `(binding [*compile-path*     ~(.getPath target-dir)
-                                               *compiler-options* ~compiler-opts]
-                                       (clojure.core/compile
-                                        (symbol ~(name main-ns)))))])]))
-
-(defn- compile*
+(defn- do-compile
   "Compiles the main-ns by writing compiled .class files to target-dir.
 
   Displays a spin animation during the process."
   [^Symbol main-ns ^Sequential classpath ^File target-dir ^IPersistentMap compiler-opts]
-  (let [urls         (into-array URL (map #(.toURL %) (conj classpath target-dir)))
-        class-loader (URLClassLoader. urls (.. ClassLoader getSystemClassLoader getParent))
-        clojure      (.loadClass class-loader "clojure.main")
-        main         (.getDeclaredMethod clojure "main" (into-array Class  [(.getClass (make-array String 0))]))
+  (let [forms `(try
+                 (binding [*compile-path* ~(str target-dir)
+                           *compiler-options* ~compiler-opts]
+                   (clojure.core/compile ~(symbol (name main-ns))))
+                 (catch Throwable err#
+                   (.printStackTrace err#)
+                   (System/exit 1)))
         _            (misc/log :info "Compiling %s..." main-ns)
         spin         (spinner/create-and-start!)]
     (try
-      @(future
-         (let [current-class-loader (.. Thread currentThread (getContextClassLoader))]
-           (.. Thread currentThread (setContextClassLoader class-loader))
-           (.invoke main nil (main-args main-ns target-dir compiler-opts))
-           (.. Thread currentThread (setContextClassLoader current-class-loader))))
-      (catch Throwable t
-        (rethrow-compilation-error main-ns t))
+      (sh/clojure classpath
+                  "--eval"
+                  (pr-str forms))
       (finally
-        (.. Thread currentThread (getContextClassLoader))
         (spinner/stop! spin)
         (println)))))
 
@@ -120,7 +99,7 @@
   on the classpath."
   [^Symbol main-ns ^Sequential classpath ^File target-dir ^IPersistentMap compiler-opts]
   (let [namespaces (find-namespaces-on-classpath classpath)
-        _          (compile* main-ns classpath target-dir compiler-opts)]
+        _          (do-compile main-ns classpath target-dir compiler-opts)]
     (reduce (fn [result ^File class-file]
               (assoc result class-file
                      (get-class-file-source namespaces (misc/relativize class-file target-dir))))
@@ -148,21 +127,12 @@
   (string/ends-with? (string/lower-case (.getPath file))
                      "meta-inf/manifest.mf"))
 
-(defn- clojure-file?
-  "Returns true if the java.io.File object represents a Clojure source file."
-  [^File file]
-  (let [^String file-name (.getName file)]
-    (some #(string/ends-with? file-name %)
-          namespace.file/clojure-extensions)))
-
 (defn- includes?
   "Whether or not the java.io.File object in question must be included in the
   artifact being built."
   [^File file ^IPersistentSet exclusions]
-  (or (data-readers-file? file)
-      (and (not (manifest-mf-file? file))
-           (not (clojure-file? file))
-           (every? #(not (re-find % (.getPath file))) exclusions))))
+  (and (not (manifest-mf-file? file))
+       (every? #(not (re-find % (.getPath file))) exclusions)))
 
 (defn- ^File copy
   "Copies source to target and returns it (the target file).
@@ -296,7 +266,7 @@
     (write-bytes jar-stream file-to-add)
     (.closeEntry jar-stream)))
 
-(defn- ^Manifest generate-java-manifest
+(defn- ^Manifest generate-jar-manifest
   ""
   [^Symbol main-ns]
   (letfn [(ns->class-name [^Symbol ns]
@@ -311,14 +281,17 @@
     (render
      ["Manifest-Version: 1.0"
       "Created-By: Vessel"
+         "Built-By" (System/getProperty "user.name")
+   "Build-Jdk" (System/getProperty "java.version")
       (when main-ns
-        (str "Main-Class: " (ns->class-name main-ns)))])))
+        (str "Main-Class: " (ns->class-name main-ns)))
+      (System/lineSeparator)])))
 
 (defn ^File bundle-up
   ""
   [^File jar ^Sequential files-to-be-bundled ^IPersistentMap settings]
   (let [{:keys [base-dir, main-ns]} settings]
-    (with-open [jar-stream (JarOutputStream. (BufferedOutputStream. (FileOutputStream. jar)) (generate-java-manifest main-ns))]
+    (with-open [jar-stream (JarOutputStream. (BufferedOutputStream. (FileOutputStream. jar)) (generate-jar-manifest main-ns))]
       (loop [files files-to-be-bundled]
         (let [^File next-entry (first files)]
           (if-not next-entry
