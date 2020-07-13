@@ -10,7 +10,7 @@
             [vessel.misc :as misc]
             [vessel.v1 :as v1])
   (:import [clojure.lang IPersistentMap IPersistentSet ISeq Sequential Symbol]
-           [java.io BufferedInputStream BufferedOutputStream File FileInputStream FileOutputStream InputStream]
+           [java.io BufferedInputStream BufferedOutputStream ByteArrayInputStream File FileInputStream FileOutputStream InputStream]
            [java.net URL URLClassLoader]
            java.nio.file.attribute.FileTime
            [java.util.jar JarEntry JarFile JarOutputStream]))
@@ -36,7 +36,7 @@
         (string/replace "_" "-")
         symbol)))
 
-(defn ^File get-class-file-source
+(defn- ^File get-class-file-source
   "Given a map of ns symbols to their sources (either directories or jar files
   on the classpath) and a file representing a compiled class, returns the source
   where the class in question comes from.
@@ -128,8 +128,8 @@
             (misc/filter-files (file-seq target-dir)))))
 
 (defn- merge-data-readers
-  [^InputStream src ^File target]
-  (let [new-data-readers (misc/read-edn src)
+  [^InputStream source ^File target]
+  (let [new-data-readers (misc/read-edn source)
         old-data-readers (when (misc/file-exists? target) (misc/read-edn target))]
     (->> (merge old-data-readers new-data-readers)
          pr-str
@@ -137,10 +137,16 @@
 
 (defn- data-readers-file?
   "Returns true if the java.io.File object represents a Clojure data-readers
-  (data_readers.clj or data_readers.cljc)."
+  file (data_readers.clj or data_readers.cljc)."
   [^File file]
   (re-find #"^data_readers\.cljc?$"
-           (.getPath file)))
+           (.getName file)))
+
+(defn- manifest-mf-file?
+  "Returns true if the java.io.File object represents a manifest.mf file."
+  [^File file]
+  (string/ends-with? (string/lower-case (.getPath file))
+                     "meta-inf/manifest.mf"))
 
 (defn- clojure-file?
   "Returns true if the java.io.File object represents a Clojure source file."
@@ -153,6 +159,7 @@
   "Whether or not the java.io.File object in question must be included"
   [^File file ^IPersistentSet exclusions]
   (or (data-readers-file? file)
+      (not (manifest-mf-file? file))
       (not (clojure-file? file)))
   (every? #(not (re-find % (.getPath file)))
           exclusions))
@@ -165,11 +172,11 @@
   data_readers.cljc)."
   [^InputStream source ^File target ^File base-dir ^IPersistentSet exclusions]
   (when (includes? target exclusions)
+    (io/make-parents target)
     (if (data-readers-file? target)
       (merge-data-readers source target)
-      (do (io/make-parents target)
-          (io/copy source target)
-          target))))
+      (io/copy source target))
+    target))
 
 (defn- copy-files-from-jar
   "Copies files from within the jar file to the target directory."
@@ -199,7 +206,7 @@
     (copy-files-from-dir source target-dir exclusions)
     (copy-files-from-jar source target-dir exclusions)))
 
-(defn copy-files
+(defn- ^IPersistentMap copy-files
   "Iterates over the files (typically directories and jar files) by
   copying their content to the target directory. Data
   readers (declared in data_readers.clj or data_readers.cljc in the
@@ -263,8 +270,7 @@
   (let [{::v1/keys [compiler-opts, exclusions, main-ns, resource-paths, source-paths]} manifest
         ^ISeq classpath                                                                (concat source-paths resource-paths deps)
         ^IPersistentMap classes                                                        (compile main-ns classpath target-dir compiler-opts)
-        ^ISeq paths-to-lookup-remaining-files                                          (into resource-paths deps)
-        ^IPersistentMap remaining-files                                                (copy-files paths-to-lookup-remaining-files target-dir exclusions)]
+        ^IPersistentMap remaining-files                                                (copy-files classpath target-dir exclusions)]
     (merge classes remaining-files)))
 
 (defn- write-bytes
@@ -290,15 +296,34 @@
     (write-bytes jar-stream file-to-add)
     (.closeEntry jar-stream)))
 
+(defn- ^InputStream generate-java-manifest
+  ""
+  [^Symbol main-ns]
+  (letfn [(ns->class-name [^Symbol ns]
+            (misc/kebab-case (string/replace (name ns) #"\." "/")))
+          (render [attributes]
+            (->> attributes
+                 (remove nil?)
+                 (string/join (System/lineSeparator))
+                 .getBytes
+                 ByteArrayInputStream.))]
+    (render
+     ["Manifest-Version: 1.0"
+      "Created-By: Vessel"
+      (when main-ns
+        (str "Main-Class: " (ns->class-name main-ns)))])))
+
 (defn ^File bundle-up
   ""
-  [^File jar-path ^Sequential files-to-be-bundled ^File base-dir]
-  (with-open [jar-stream (JarOutputStream. (BufferedOutputStream. (FileOutputStream. jar-path)))]
-    (loop [files files-to-be-bundled]
-      (let [^File next-entry (first files)]
-        (if-not next-entry
-          (do (.finish jar-stream)
-              jar-path)
-          (do
-            (add-jar-entry jar-stream next-entry base-dir)
-            (recur (next files))))))))
+  [^File jar ^Sequential files-to-be-bundled ^IPersistentMap settings]
+  (let [{:keys [base-dir, main-ns]} settings
+        ]
+    (with-open [jar-stream (JarOutputStream. (BufferedOutputStream. (FileOutputStream. jar)) (generate-java-manifest main-ns))]
+      (loop [files files-to-be-bundled]
+        (let [^File next-entry (first files)]
+          (if-not next-entry
+            (do (.finish jar-stream)
+                jar)
+            (do
+              (add-jar-entry jar-stream next-entry base-dir)
+              (recur (next files)))))))))

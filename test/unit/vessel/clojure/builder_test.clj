@@ -19,7 +19,7 @@
 
     (testing "given a class file, returns its source"
       (are [file-path src] (= (io/file src)
-                              (builder/get-class-file-source namespaces (io/file file-path)))
+                              (#'builder/get-class-file-source namespaces (io/file file-path)))
         "clj_jwt/base64$decode.class"         "clj-jwt.jar"
         "clj_jwt/base64/ByteArrayInput.class" "clj-jwt.jar"
         "clj_tuple$fn__18034.class"           "clj-tuple.jar"
@@ -29,37 +29,37 @@
 
     (testing "throws an exception when the source can't be found"
       (is (thrown? IllegalStateException
-                   (builder/get-class-file-source namespace (io/file "clojure/zip$zipper.class")))))))
+                   (#'builder/get-class-file-source namespace (io/file "clojure/zip$zipper.class")))))))
 
 (deftest copy-files-test
-  (let [src    (io/file "test/resources")
+  (let [source (io/file "test/resources")
         target (io/file "target/tests/builder-test/copy-files-test")
-        output (builder/copy-files #{(io/file src "lib1")
-                                     (io/file src "lib2")
-                                     (io/file src "lib3/lib3.jar")
-                                     (io/file src "lib4")}
-                                   target)]
+        output (#'builder/copy-files [(io/file source "lib1")
+                                      (io/file source "lib2")
+                                      (io/file source "lib3/lib3.jar")
+                                      (io/file source "lib4")]
+                                     target
+                                     #{})]
 
-    (testing "copies all src files (typically resources) to the target directory
-    under the `classes` folder"
-      (is (match? (m/in-any-order ["classes/META-INF/MANIFEST.MF"
-                                   "classes/data_readers.clj"
-                                   "classes/data_readers.cljc"
-                                   "classes/lib2/resource2.json"
-                                   "classes/lib3/resource3.edn"
-                                   "classes/resource1.edn"])
+    (testing "copies all source files  to the target directory"
+      (is (match? (m/in-any-order ["META-INF/MANIFEST.MF"
+                                   "data_readers.clj"
+                                   "data_readers.cljc"
+                                   "lib2/resource2.json"
+                                   "lib3/resource3.edn"
+                                   "resource1.edn"])
                   (->> target
                        file-seq
                        misc/filter-files
                        (map (comp #(.getPath %) #(misc/relativize % target)))))))
 
-    (testing "after copying files, returns a map from target to src files"
-      (is (= {(io/file target "classes/lib2/resource2.json")  (io/file src "lib2")
-              (io/file target "classes/lib3/resource3.edn")   (io/file src "lib3/lib3.jar")
-              (io/file target "classes/META-INF/MANIFEST.MF") (io/file src "lib3/lib3.jar")
-              (io/file target "classes/data_readers.clj")     (io/file src "lib2")
-              (io/file target "classes/data_readers.cljc")    (io/file src "lib4")
-              (io/file target "classes/resource1.edn")        (io/file src "lib1")}
+    (testing "after copying files, returns a map from target to source files"
+      (is (= {(io/file target "lib2/resource2.json")  (io/file source "lib2")
+              (io/file target "lib3/resource3.edn")   (io/file source "lib3/lib3.jar")
+              (io/file target "META-INF/MANIFEST.MF") (io/file source "lib3/lib3.jar")
+              (io/file target "data_readers.clj")     (io/file source "lib2")
+              (io/file target "data_readers.cljc")    (io/file source "lib4")
+              (io/file target "resource1.edn")        (io/file source "lib1")}
              output)))
 
     (testing "multiple data-readers (either data_readers.clj or
@@ -67,10 +67,10 @@
     their respective files"
       (is (= {'lib1/url  'lib1.url/string->url
               'lib2/time 'lib2.time/string->local-date-time}
-             (misc/read-edn (io/file target "classes/data_readers.clj"))))
+             (misc/read-edn (io/file target "data_readers.clj"))))
       (is (= {'lib3/date 'lib3.date/string->local-date
               'lib4/usd  'lib4.money/bigdec->money}
-             (misc/read-edn (io/file target "classes/data_readers.cljc")))))))
+             (misc/read-edn (io/file target "data_readers.cljc")))))))
 
 (defn get-file-names
   [^File dir]
@@ -78,52 +78,29 @@
 
 (deftest build-application-test
   (let [project-dir  (io/file "test/resources/my-app")
-        target-dir   (io/file "target/tests/builder-test/build-application-test")
+        target-dir   (misc/make-empty-dir (io/file "target/tests/builder-test/build-application-test/classes"))
         deps         (classpath/assemble-deps {:clojure/tool :tools.deps.alpha :project/descriptor (io/file project-dir "deps.edn")})
-        manifest      #::v1{:main-ns        'my-app.server
+        manifest     #::v1 {:main-ns        'my-app.server
                             :source-paths   #{(io/file project-dir "src")}
                             :resource-paths #{(io/file project-dir "resources")}}
         build-result (builder/build-application manifest deps target-dir)]
 
-    (testing "the classes directory has the expected files and directories"
-      (is (match? (m/in-any-order ["clojure"
-                                   "META-INF"
-                                   "my_app"
-                                   "resource1.edn"])
-                  (get-file-names (io/file target-dir "classes")))))
+    (testing "the target directory contains some of the expected directories and files"
+      (is (match? (m/embeds ["clojure"
+                             "javax"
+                             "my_app"
+                             "org"
+                             "about.html"
+                             "resource1.edn"])
+                  (get-file-names target-dir))))
 
-    (testing "the directory classes/my_app contains some of the expected files"
+    (testing "the directory my_app contains the expected files"
       (is (match? (m/embeds ["server.class"
                              "server__init.class"
-                             "server$_main.class"
-                             "server.clj"])
-                  (get-file-names (io/file target-dir "classes/my_app")))))
+                             "server$_main.class"])
+                  (get-file-names (io/file target-dir "my_app")))))
 
-    (testing "the lib directory has the expected files"
-      (is (match? (m/in-any-order ["core.specs.alpha-0.2.44.jar"
-                                   "javax.servlet-api-3.1.0.jar"
-                                   "jetty-http-9.4.25.v20191220.jar"
-                                   "jetty-io-9.4.25.v20191220.jar"
-                                   "jetty-server-9.4.25.v20191220.jar"
-                                   "jetty-util-9.4.25.v20191220.jar"
-                                   "spec.alpha-0.2.176.jar"])
-                  (get-file-names (io/file target-dir "lib")))))
-
-    (testing "the build result data contains a map in the
-      :clojure.application/classes key whose keys match the existing files at
-      the classes directory"
-      (is (= (set (misc/filter-files (file-seq (io/file target-dir "classes"))))
-             (set (keys (:clojure.application/classes build-result))))))
-
-    (testing "the build result data contains a map in the
-      :clojure.application/lib key whose keys match the existing files at
-      the lib directory"
-      (is (= (set (misc/filter-files (file-seq (io/file target-dir "lib"))))
-             (set (keys (:clojure.application/lib build-result))))))
-
-    ;; TODO: uncomment after fixing https://github.com/nubank/vessel/issues/7.
-
-    #_(testing "throws an exception describing the underwing compilation error"
-        (is (thrown-match? clojure.lang.ExceptionInfo
-                           #:vessel.error{:category :vessel/compilation-error}
-                           (builder/build-application (assoc manifest :main-ns 'my-app.compilation-error) deps target-dir))))))
+    (testing "the keys of the build-result map match all files created in the
+    target directory"
+      (is (= (set (misc/filter-files (file-seq target-dir)))
+             (set (keys build-result)))))))
