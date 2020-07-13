@@ -143,7 +143,7 @@
            (.getName file)))
 
 (defn- manifest-mf-file?
-  "Returns true if the java.io.File object represents a manifest.mf file."
+  "Returns true if the java.io.File object represents a MANIFEST.MF file."
   [^File file]
   (string/ends-with? (string/lower-case (.getPath file))
                      "meta-inf/manifest.mf"))
@@ -160,9 +160,9 @@
   [^File file ^IPersistentSet exclusions]
   (or (data-readers-file? file)
       (not (manifest-mf-file? file))
-      (not (clojure-file? file)))
-  (every? #(not (re-find % (.getPath file)))
-          exclusions))
+      (not (clojure-file? file))
+      (every? #(not (re-find % (.getPath file)))
+              exclusions)))
 
 (defn- ^File copy
   "Copies source to target and returns it (the target file).
