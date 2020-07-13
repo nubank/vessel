@@ -1,6 +1,7 @@
 (ns vessel.clojure.builder-test
   (:require [clojure.java.io :as io]
             [clojure.test :refer :all]
+            [clojure.tools.namespace.file :as namespace.file]
             [matcher-combinators.matchers :as m]
             [matcher-combinators.test :refer [match?]]
             [vessel.clojure.builder :as builder]
@@ -32,18 +33,20 @@
                    (#'builder/get-class-file-source namespace (io/file "clojure/zip$zipper.class")))))))
 
 (deftest copy-files-test
-  (let [source (io/file "test/resources")
+  (let [source (io/file "test/resources/clojure-builder")
         target (io/file "target/tests/builder-test/copy-files-test")
         output (#'builder/copy-files [(io/file source "lib1")
                                       (io/file source "lib2")
                                       (io/file source "lib3/lib3.jar")
                                       (io/file source "lib4")]
                                      target
-                                     #{})]
+                                     #{#"\.RSA$"})]
 
-    (testing "copies all source files  to the target directory"
-      (is (match? (m/in-any-order ["META-INF/MANIFEST.MF"
-                                   "data_readers.clj"
+    (testing "copies all relevant files to the target directory. Excludes
+    Clojure source files (except data-readers), manifest
+    files (META-INF/MANIFEST.MF) and files that match the supplied exclusion
+    filters"
+      (is (match? (m/in-any-order ["data_readers.clj"
                                    "data_readers.cljc"
                                    "lib2/resource2.json"
                                    "lib3/resource3.edn"
@@ -53,13 +56,12 @@
                        misc/filter-files
                        (map (comp #(.getPath %) #(misc/relativize % target)))))))
 
-    (testing "after copying files, returns a map from target to source files"
-      (is (= {(io/file target "lib2/resource2.json")  (io/file source "lib2")
-              (io/file target "lib3/resource3.edn")   (io/file source "lib3/lib3.jar")
-              (io/file target "META-INF/MANIFEST.MF") (io/file source "lib3/lib3.jar")
-              (io/file target "data_readers.clj")     (io/file source "lib2")
-              (io/file target "data_readers.cljc")    (io/file source "lib4")
-              (io/file target "resource1.edn")        (io/file source "lib1")}
+    (testing "after copying files, returns a map of target to source files"
+      (is (= {(io/file target "lib2/resource2.json") (io/file source "lib2")
+              (io/file target "lib3/resource3.edn")  (io/file source "lib3/lib3.jar")
+              (io/file target "data_readers.clj")    (io/file source "lib2")
+              (io/file target "data_readers.cljc")   (io/file source "lib4")
+              (io/file target "resource1.edn")       (io/file source "lib1")}
              output)))
 
     (testing "multiple data-readers (either data_readers.clj or
@@ -103,4 +105,13 @@
     (testing "the keys of the build-result map match all files created in the
     target directory"
       (is (= (set (misc/filter-files (file-seq target-dir)))
-             (set (keys build-result)))))))
+             (set (keys build-result)))))
+
+    (testing "excludes certain files from the built artifact"
+      (is (empty?
+           (filter namespace.file/clojure-file? (misc/filter-files (file-seq target-dir))))
+          "excludes Clojure source files")
+
+      (is (not (misc/file-exists?
+                (io/file target-dir "META-INF/MANIFEST.MF")))
+          "excludes jar manifests"))))

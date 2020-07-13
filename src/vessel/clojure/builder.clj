@@ -156,13 +156,13 @@
           namespace.file/clojure-extensions)))
 
 (defn- includes?
-  "Whether or not the java.io.File object in question must be included"
+  "Whether or not the java.io.File object in question must be included in the
+  artifact being built."
   [^File file ^IPersistentSet exclusions]
   (or (data-readers-file? file)
-      (not (manifest-mf-file? file))
-      (not (clojure-file? file))
-      (every? #(not (re-find % (.getPath file)))
-              exclusions)))
+      (and (not (manifest-mf-file? file))
+           (not (clojure-file? file))
+           (every? #(not (re-find % (.getPath file))) exclusions))))
 
 (defn- ^File copy
   "Copies source to target and returns it (the target file).
@@ -317,8 +317,7 @@
 (defn ^File bundle-up
   ""
   [^File jar ^Sequential files-to-be-bundled ^IPersistentMap settings]
-  (let [{:keys [base-dir, main-ns]} settings
-        ]
+  (let [{:keys [base-dir, main-ns]} settings]
     (with-open [jar-stream (JarOutputStream. (BufferedOutputStream. (FileOutputStream. jar)) (generate-java-manifest main-ns))]
       (loop [files files-to-be-bundled]
         (let [^File next-entry (first files)]
