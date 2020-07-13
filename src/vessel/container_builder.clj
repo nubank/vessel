@@ -144,14 +144,17 @@
 
 (defn- bundle-needed-files
   ""
-  [^IPersistentMap files-to-be-layered ^File classes-dir]
+  [^IPersistentMap manifest ^IPersistentMap files-to-be-layered ^File classes-dir]
   (into {}
         (map (fn [[^Keyword layer-id, ^Sequential files]]
                (if (= layer-id :resource-paths)
                  [layer-id files]
-                 (let [^File jar (io/file (.getParentFile classes-dir) (str (name layer-id) ".jar"))]
+                 (let [^File jar (io/file (.getParentFile classes-dir) (str (name layer-id) ".jar"))
+                       {::v1/keys [main-ns]} manifest]
                    [layer-id
-                    [(clojure.builder/bundle-up jar files classes-dir)]])))
+                    [(clojure.builder/bundle-up jar files {:base-dir classes-dir
+                                                           :main-ns (when (= layer-id :source-paths)
+                                                                      main-ns)})]])))
              files-to-be-layered)))
 
 (defn- ^File resolve-path-in-container
@@ -187,7 +190,7 @@
             ^File classes-dir (misc/make-empty-dir "/tmp/vessel" id "classes")
             ^IPersistentMap file-mappings (clojure.builder/build-application manifest deps classes-dir)
             ^IPersistentMap distributed-files (distribute-files-across-respective-layers file-mappings cached-layer-ids files)
-            ^IPersistentMap files-to-be-layered (bundle-needed-files distributed-files classes-dir)]
+            ^IPersistentMap files-to-be-layered (bundle-needed-files manifest distributed-files classes-dir)]
         (map #(make-file-entries-layer manifest layering-data % classes-dir)
              files-to-be-layered)))))
 

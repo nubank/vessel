@@ -10,7 +10,7 @@
             [vessel.misc :as misc]
             [vessel.v1 :as v1])
   (:import [clojure.lang IPersistentMap IPersistentSet ISeq Sequential Symbol]
-           [java.io BufferedInputStream BufferedOutputStream File FileInputStream FileOutputStream InputStream]
+           [java.io BufferedInputStream BufferedOutputStream ByteArrayInputStream File FileInputStream FileOutputStream InputStream]
            [java.net URL URLClassLoader]
            java.nio.file.attribute.FileTime
            [java.util.jar JarEntry JarFile JarOutputStream]))
@@ -142,6 +142,12 @@
   (re-find #"^data_readers\.cljc?$"
            (.getName file)))
 
+(defn- manifest-mf-file?
+  "Returns true if the java.io.File object represents a manifest.mf file."
+  [^File file]
+  (string/ends-with? (string/lower-case (.getPath file))
+                     "meta-inf/manifest.mf"))
+
 (defn- clojure-file?
   "Returns true if the java.io.File object represents a Clojure source file."
   [^File file]
@@ -153,6 +159,7 @@
   "Whether or not the java.io.File object in question must be included"
   [^File file ^IPersistentSet exclusions]
   (or (data-readers-file? file)
+      (not (manifest-mf-file? file))
       (not (clojure-file? file)))
   (every? #(not (re-find % (.getPath file)))
           exclusions))
@@ -289,15 +296,34 @@
     (write-bytes jar-stream file-to-add)
     (.closeEntry jar-stream)))
 
+(defn- ^InputStream generate-java-manifest
+  ""
+  [^Symbol main-ns]
+  (letfn [(ns->class-name [^Symbol ns]
+            (misc/kebab-case (string/replace (name ns) #"\." "/")))
+          (render [attributes]
+            (->> attributes
+                 (remove nil?)
+                 (string/join (System/lineSeparator))
+                 .getBytes
+                 ByteArrayInputStream.))]
+    (render
+     ["Manifest-Version: 1.0"
+      "Created-By: Vessel"
+      (when main-ns
+        (str "Main-Class: " (ns->class-name main-ns)))])))
+
 (defn ^File bundle-up
   ""
-  [^File jar-path ^Sequential files-to-be-bundled ^File base-dir]
-  (with-open [jar-stream (JarOutputStream. (BufferedOutputStream. (FileOutputStream. jar-path)))]
-    (loop [files files-to-be-bundled]
-      (let [^File next-entry (first files)]
-        (if-not next-entry
-          (do (.finish jar-stream)
-              jar-path)
-          (do
-            (add-jar-entry jar-stream next-entry base-dir)
-            (recur (next files))))))))
+  [^File jar ^Sequential files-to-be-bundled ^IPersistentMap settings]
+  (let [{:keys [base-dir, main-ns]} settings
+        ]
+    (with-open [jar-stream (JarOutputStream. (BufferedOutputStream. (FileOutputStream. jar)) (generate-java-manifest main-ns))]
+      (loop [files files-to-be-bundled]
+        (let [^File next-entry (first files)]
+          (if-not next-entry
+            (do (.finish jar-stream)
+                jar)
+            (do
+              (add-jar-entry jar-stream next-entry base-dir)
+              (recur (next files)))))))))
