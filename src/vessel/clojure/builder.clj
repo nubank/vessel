@@ -59,8 +59,9 @@
   (let [forms `(try
                  (binding [*compile-path* ~(str target-dir)
                            *compiler-options* ~compiler-opts]
-                   (clojure.core/compile ~(symbol (name main-ns))))
+                   (clojure.core/compile (symbol ~(name main-ns))))
                  (catch Throwable err#
+                   (println)
                    (.printStackTrace err#)
                    (System/exit 1)))
         _            (misc/log :info "Compiling %s..." main-ns)
@@ -281,8 +282,6 @@
     (render
      ["Manifest-Version: 1.0"
       "Created-By: Vessel"
-         "Built-By" (System/getProperty "user.name")
-   "Build-Jdk" (System/getProperty "java.version")
       (when main-ns
         (str "Main-Class: " (ns->class-name main-ns)))
       (System/lineSeparator)])))
