@@ -2,17 +2,16 @@
   "Builder for Clojure applications."
   (:refer-clojure :exclude [compile])
   (:require [clojure.java.classpath :as java.classpath]
-            [vessel.sh :as sh]
             [clojure.java.io :as io]
             [clojure.string :as string]
-            [clojure.tools.namespace.file :as namespace.file]
             [clojure.tools.namespace.find :as namespace.find]
             [spinner.core :as spinner]
             [vessel.misc :as misc]
+            [vessel.sh :as sh]
             [vessel.v1 :as v1])
   (:import [clojure.lang IPersistentMap IPersistentSet ISeq Sequential Symbol]
            [java.io BufferedInputStream BufferedOutputStream ByteArrayInputStream File FileInputStream FileOutputStream InputStream]
-           [java.net URL URLClassLoader]
+           [java.nio.file Files LinkOption]
            java.nio.file.attribute.FileTime
            [java.util.jar JarEntry JarFile JarOutputStream Manifest]))
 
@@ -57,15 +56,15 @@
   Displays a spin animation during the process."
   [^Symbol main-ns ^Sequential classpath ^File target-dir ^IPersistentMap compiler-opts]
   (let [forms `(try
-                 (binding [*compile-path* ~(str target-dir)
+                 (binding [*compile-path*     ~(str target-dir)
                            *compiler-options* ~compiler-opts]
                    (clojure.core/compile (symbol ~(name main-ns))))
                  (catch Throwable err#
                    (println)
                    (.printStackTrace err#)
                    (System/exit 1)))
-        _            (misc/log :info "Compiling %s..." main-ns)
-        spin         (spinner/create-and-start!)]
+        _     (misc/log :info "Compiling %s..." main-ns)
+        spin  (spinner/create-and-start!)]
     (try
       (sh/clojure classpath
                   "--eval"
@@ -141,13 +140,15 @@
   Gives a special treatment to data-readers, by merging multiple ones
   into their respective files (data_readers.clj or
   data_readers.cljc)."
-  [^InputStream source ^File target ^File base-dir ^IPersistentSet exclusions]
+  [^InputStream source ^File target ^File base-dir ^Long last-modified-time ^IPersistentSet exclusions]
   (when (includes? target exclusions)
     (io/make-parents target)
     (if (data-readers-file? target)
       (merge-data-readers source target)
       (io/copy source target))
-    target))
+    (let [^FileTime file-time (FileTime/fromMillis last-modified-time)]
+      (Files/setAttribute (.toPath target) "lastModifiedTime" file-time (make-array LinkOption 0))
+      target)))
 
 (defn- copy-files-from-jar
   "Copies files from within the jar file to the target directory."
@@ -159,23 +160,23 @@
          (mapv (fn [^JarEntry jar-entry]
                  (let [^File target-file (io/file target-dir (.getName jar-entry))]
                    (when-not (.isDirectory jar-entry)
-                     (copy (.getInputStream jar-file jar-entry) target-file target-dir exclusions))))))))
+                     (copy (.getInputStream jar-file jar-entry) target-file target-dir (.getTime jar-entry) exclusions))))))))
 
 (defn- copy-files-from-dir
   "Copies files (typically resources) from source to target."
-  [^File source ^File target-dir ^IPersistentSet exclusions]
-  (->> source
+  [^File source-dir ^File target-dir ^IPersistentSet exclusions]
+  (->> source-dir
        file-seq
        misc/filter-files
-       (mapv (fn [^File file]
-               (let [target-file (io/file target-dir (misc/relativize file source))]
-                 (copy (io/input-stream file) target-file target-dir exclusions))))))
+       (mapv (fn [^File source-file]
+               (let [target-file (io/file target-dir (misc/relativize source-file source-dir))]
+                 (copy (io/input-stream source-file) target-file target-dir (.lastModified source-file) exclusions))))))
 
 (defn- copy-files*
-  [^File source ^File target-dir ^IPersistentSet exclusions]
-  (if (.isDirectory source)
-    (copy-files-from-dir source target-dir exclusions)
-    (copy-files-from-jar source target-dir exclusions)))
+  [^File jar-file-or-dir ^File target-dir ^IPersistentSet exclusions]
+  (if (.isDirectory jar-file-or-dir)
+    (copy-files-from-dir jar-file-or-dir target-dir exclusions)
+    (copy-files-from-jar jar-file-or-dir target-dir exclusions)))
 
 (defn- ^IPersistentMap copy-files
   "Iterates over the files (typically directories and jar files) by
