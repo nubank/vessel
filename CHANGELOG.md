@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.135] - 2020-08-10
+
 ### Fixed
 - Preserve timestamps when copying files:
   [#21](https://github.com/nubank/vessel/pull/21). The corresponding issue was
