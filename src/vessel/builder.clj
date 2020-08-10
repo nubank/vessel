@@ -11,6 +11,8 @@
   (:import clojure.lang.Symbol
            [java.io File InputStream]
            [java.net URL URLClassLoader]
+           [java.nio.file Files LinkOption]
+           java.nio.file.attribute.FileTime
            [java.util.jar JarEntry JarFile]))
 
 (defn- ^Symbol parent-ns
@@ -53,7 +55,7 @@
   ExceptionInfo that will be properly handled by Vessel."
   [^Symbol main-class throwable]
   (throw (ex-info (str "Failed to compile " main-class)
-                  #:vessel.error{:category :vessel/compilation-error
+                  #:vessel.error{:category  :vessel/compilation-error
                                  :throwable (ex-cause (ex-cause throwable))})))
 
 (defn- main-args
@@ -71,12 +73,12 @@
 
   Displays a spin animation during the process."
   [^Symbol main-class ^File target-dir classpath-files]
-  (let [urls (into-array URL (map #(.toURL %) classpath-files))
+  (let [urls         (into-array URL (map #(.toURL %) classpath-files))
         class-loader (URLClassLoader. urls (.. ClassLoader getSystemClassLoader getParent))
-        clojure (.loadClass class-loader "clojure.main")
-        main (.getDeclaredMethod clojure "main" (into-array Class  [(.getClass (make-array String 0))]))
-        _ (misc/log :info "Compiling %s..." main-class)
-        spin (spinner/create-and-start!)]
+        clojure      (.loadClass class-loader "clojure.main")
+        main         (.getDeclaredMethod clojure "main" (into-array Class  [(.getClass (make-array String 0))]))
+        _            (misc/log :info "Compiling %s..." main-class)
+        spin         (spinner/create-and-start!)]
     (try
       @(future
          (binding [*out* (java.io.StringWriter.)]
@@ -93,7 +95,7 @@
   or a jar file)."
   [^File file]
   (cond
-    (.isDirectory file) (namespace.find/find-namespaces-in-dir file)
+    (.isDirectory file)             (namespace.find/find-namespaces-in-dir file)
     (java.classpath/jar-file? file) (namespace.find/find-namespaces-in-jarfile (JarFile. file))))
 
 (defn- find-namespaces-on-classpath
@@ -114,14 +116,19 @@
   java.io.File) to their sources (instances of java.io.File as well
   representing directories or jar files on the classpath)."
   [classpath-files ^Symbol main-class ^File target-dir]
-  (let [namespaces (find-namespaces-on-classpath classpath-files)
+  (let [namespaces  (find-namespaces-on-classpath classpath-files)
         classes-dir (misc/make-dir target-dir "classes")
-        _ (compile* main-class classes-dir classpath-files)]
+        _           (compile* main-class classes-dir classpath-files)]
     (reduce (fn [result ^File class-file]
               (assoc result class-file
                      (get-class-file-source namespaces (misc/relativize class-file classes-dir))))
             {}
             (misc/filter-files (file-seq classes-dir)))))
+
+(defn- set-timestamp
+  [^File file ^Long last-modified-time]
+  (let [^FileTime file-time (FileTime/fromMillis last-modified-time)]
+    (Files/setAttribute (.toPath file) "lastModifiedTime" file-time (make-array LinkOption 0))))
 
 (defn copy-libs
   "Copies third-party libraries to the lib directory under target-dir.
@@ -132,6 +139,7 @@
     (mapv (fn                                                                                                                          [^File lib]
             (let [^File dest-file (io/file lib-dir (.getName lib))]
               (io/copy lib dest-file)
+              (set-timestamp dest-file (.lastModified dest-file))
               dest-file))
           libs)))
 
@@ -149,12 +157,13 @@
   Gives a special treatment to data-readers, by merging multiple ones
   into their respective files (data_readers.clj or
   data_readers.cljc)."
-  [^InputStream src ^File target ^File base-dir]
+  [^InputStream src ^File target ^File base-dir ^Long last-modified-time]
   (let [file-path (.getPath (misc/relativize target base-dir))]
     (if (re-find #"^data_readers\.cljc?$" file-path)
       (merge-data-readers src target)
       (do (io/make-parents target)
           (io/copy src target)))
+    (set-timestamp target last-modified-time)
     target))
 
 (defn- copy-files-from-jar
@@ -167,7 +176,7 @@
          (mapv (fn [^JarEntry jar-entry]
                  (let [^File target-file (io/file target-dir (.getName jar-entry))]
                    (when-not (.isDirectory jar-entry)
-                     (copy (.getInputStream jar-file jar-entry) target-file target-dir))))))))
+                     (copy (.getInputStream jar-file jar-entry) target-file target-dir (.getTime jar-entry)))))))))
 
 (defn- copy-files-from-dir
   "Copies files (typically resources) from source to target."
@@ -177,7 +186,7 @@
        misc/filter-files
        (mapv (fn [^File file]
                (let [target-file (io/file target-dir (misc/relativize file src))]
-                 (copy (io/input-stream file) target-file target-dir))))))
+                 (copy (io/input-stream file) target-file target-dir (.lastModified file)))))))
 
 (defn- copy-files*
   [^File src ^File target-dir]
@@ -229,10 +238,10 @@
   that the application depends on."
   [{:keys [classpath-files ^Symbol main-class resource-paths ^File target-dir]}]
   {:pre [classpath-files main-class target-dir]}
-  (let [web-inf (misc/make-dir target-dir "WEB-INF")
-        classes (compile classpath-files main-class web-inf)
+  (let [web-inf        (misc/make-dir target-dir "WEB-INF")
+        classes        (compile classpath-files main-class web-inf)
         dirs+jar-files (set/union resource-paths (set (vals classes)))
-        libs (misc/filter-files (set/difference classpath-files dirs+jar-files))
+        libs           (misc/filter-files (set/difference classpath-files dirs+jar-files))
         resource-files (copy-files dirs+jar-files web-inf)]
     #:app{:classes (merge classes resource-files)
-          :lib (copy-libs libs web-inf)}))
+          :lib     (copy-libs libs web-inf)}))
