@@ -69,7 +69,11 @@
              (misc/read-edn (io/file target "classes/data_readers.clj"))))
       (is (= {'lib3/date 'lib3.date/string->local-date
               'lib4/usd  'lib4.money/bigdec->money}
-             (misc/read-edn (io/file target "classes/data_readers.cljc")))))))
+             (misc/read-edn (io/file target "classes/data_readers.cljc")))))
+
+    (testing "preserve timestamps when copying files"
+      (is (=              (.lastModified (io/file src "lib1/resource1.edn"))
+                          (.lastModified (io/file target "classes/resource1.edn")))))))
 
 (defn get-file-names
   [^File dir]
@@ -111,7 +115,7 @@
              (set (misc/filter-files (file-seq (io/file target "WEB-INF/lib")))))))
 
     ;; TODO: uncomment after fixing https://github.com/nubank/vessel/issues/7.
-    #_ (testing "throws an exception describing the underwing compilation error"
+    #_(testing "throws an exception describing the underwing compilation error"
         (is (thrown-match? clojure.lang.ExceptionInfo
                            #:vessel.error{:category :vessel/compilation-error}
                            (builder/build-app (assoc options :main-class 'my-app.compilation-error)))))))

@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- Preserve timestamps when copying files:
+  [#21](https://github.com/nubank/vessel/pull/21). The corresponding issue was
+  slowing down the startup of containerized applications and causing runtime
+  problems due to conflicts between AOT and JIT compiled Clojure namespaces.
+
 ## [0.2.134] - 2020-07-03
 
 ### Added
