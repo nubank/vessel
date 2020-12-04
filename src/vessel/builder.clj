@@ -39,16 +39,11 @@
 (defn ^File get-class-file-source
   "Given a map from ns symbols to their sources (either directories or
   jar files on the classpath) and a file representing a compiled
-  class, returns the source where the class in question comes from.
-
-  This function must always return a known source for the .class file
-  in question. If it can't determine the source, it throws an
-  IllegalStateException."
+  class, returns the source where the class in question comes from."
   [namespaces ^File class-file]
   (let [ns (class-file->ns class-file)]
-    (or (get namespaces ns)
-        (get namespaces (parent-ns ns))
-        (throw (IllegalStateException. (str "Unknown source for .class file " class-file))))))
+    (get namespaces ns
+         (get namespaces (parent-ns ns)))))
 
 (defn- rethrow-compilation-error
   "Unwrap the actual compilation exception and rethrow it as an
@@ -115,13 +110,15 @@
   Returns a map from compiled class files (as instances of
   java.io.File) to their sources (instances of java.io.File as well
   representing directories or jar files on the classpath)."
-  [classpath-files ^Symbol main-class ^File target-dir]
+  [classpath-files ^Symbol main-class source-paths ^File target-dir]
   (let [namespaces  (find-namespaces-on-classpath classpath-files)
         classes-dir (misc/make-dir target-dir "classes")
         _           (compile* main-class classes-dir classpath-files)]
     (reduce (fn [result ^File class-file]
-              (assoc result class-file
-                     (get-class-file-source namespaces (misc/relativize class-file classes-dir))))
+              (let [source-file (or (get-class-file-source namespaces (misc/relativize class-file classes-dir))
+                                    ;; Defaults to the first element of source-paths if the class file doesn't match any known source.
+                                    (first source-paths))]
+                (assoc result class-file source-file)))
             {}
             (misc/filter-files (file-seq classes-dir)))))
 
@@ -236,10 +233,10 @@
   on the classpath);
   * :app/lib - a sequence of java.io.File objects containing libraries
   that the application depends on."
-  [{:keys [classpath-files ^Symbol main-class resource-paths ^File target-dir]}]
-  {:pre [classpath-files main-class target-dir]}
+  [{:keys [classpath-files ^Symbol main-class resource-paths source-paths ^File target-dir]}]
+  {:pre [classpath-files main-class source-paths target-dir]}
   (let [web-inf        (misc/make-dir target-dir "WEB-INF")
-        classes        (compile classpath-files main-class web-inf)
+        classes        (compile classpath-files main-class source-paths web-inf)
         dirs+jar-files (set/union resource-paths (set (vals classes)))
         libs           (misc/filter-files (set/difference classpath-files dirs+jar-files))
         resource-files (copy-files dirs+jar-files web-inf)]

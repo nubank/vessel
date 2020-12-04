@@ -24,11 +24,7 @@
         "clj_tuple$fn__18034.class"           "clj-tuple.jar"
         "zookeeper$host_acl.class"            "zookeeper-clj.jar"
         "zookeeper$set_data$fn__54225.class"  "zookeeper-clj.jar"
-        "zookeeper__init.class"               "zookeeper-clj.jar"))
-
-    (testing "throws an exception when the source can't be found"
-      (is (thrown? IllegalStateException
-                   (builder/get-class-file-source namespace (io/file "clojure/zip$zipper.class")))))))
+        "zookeeper__init.class"               "zookeeper-clj.jar"))))
 
 (deftest copy-files-test
   (let [src    (io/file "test/resources")
@@ -84,6 +80,7 @@
         target          (io/file "target/tests/builder-test/build-app-test")
         classpath-files (set (map io/file (string/split (classpath project-dir) #":")))
         options         {:classpath-files classpath-files
+                         :source-paths  #{(io/file project-dir "src")}
                          :resource-paths  #{(io/file project-dir "resources")}
                          :target-dir      target}
         output          (builder/build-app (assoc options :main-class 'my-app.server))]
