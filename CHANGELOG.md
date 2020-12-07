@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.137] - 2020-12-07
+
 ### Fixed
 - Avoid blowing up the build process when a non-mapped class file is found [#22](https://github.com/nubank/vessel/pull/22). Now, the non-mapped file is assigned to the first known source directory in order to force the file to be copied to the corresponding image layer.
 
