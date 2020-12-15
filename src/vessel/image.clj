@@ -122,10 +122,10 @@
   "Turns image information read from a manifest into an image reference
   map. "
   [{:keys [registry repository tag tar-path]}]
-  #:image{:registry   registry
-          :repository repository
-          :tag        tag
-          :tar-path tar-path})
+  (misc/assoc-some #:image{:registry   registry
+                           :repository repository
+                           :tag        tag}
+                   :image/tar-path tar-path))
 
 (defn render-image-spec
   [{:app/keys [classes lib]} {:keys [manifest user ^File tarball] :as options}]

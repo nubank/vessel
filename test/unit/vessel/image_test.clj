@@ -66,7 +66,7 @@
   for the files in question"
                  (is (= #:image{:from
                                 #:image   {:registry "my-company.com" :repository "jetty" :tag "v1"}
-                                :user "jetty"
+                                :user     "jetty"
                                 :name
                                 #:image   {:registry "my-company.com" :repository "my-app" :tag "v2"}
                                 :layers
