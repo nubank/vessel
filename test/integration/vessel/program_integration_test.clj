@@ -16,7 +16,7 @@
   Defaults to localhost, but it may be overwritten through the
   environment variable VESSEL_TEST_REGISTRY."
   (or (System/getenv "VESSEL_TEST_REGISTRY")
-                  "localhost"))
+      "localhost"))
 
 (use-fixtures :once (ensure-clean-test-dir))
 
@@ -96,4 +96,27 @@
                     (vessel/-main "push"
                                   "--tarball" (str (io/file target-dir "my-app.tar"))
                                   "--allow-insecure-registries"
-                                  "--anonymous"))))))
+                                  "--anonymous"))))
+
+             (testing "containerizes a new image, now using a tarball as the base image"
+               (is (zero? (vessel/-main "manifest"
+                                        "--attribute" (str "tar-path:" (io/file target-dir "my-app.tar"))
+                                        "--object" "image"
+                                        "--output" (str (io/file target-dir "tarball.json")))))
+
+               (is (zero? (vessel/-main "image"
+                                        "--repository" "nubank/my-app2"
+                                        "--registry" (str registry ":5000")
+                                        "--base-image" (str (io/file target-dir "tarball.json"))
+                                        "--output" (str (io/file target-dir "image2.json")))))
+
+               (is (zero?
+                    (vessel/-main "containerize"
+                                  "--app-root" "/opt/my-app2"
+                                  "--classpath" (classpath project-dir)
+                                  "--main-class" "my-app.server"
+                                  "--manifest" (str (io/file target-dir "image2.json"))
+                                  "--output" (str (io/file target-dir "my-app2.tar"))
+                                  "--source-path" (str (io/file project-dir "src"))
+                                  "--resource-path" (str (io/file project-dir "resources"))
+                                  "--verbose"))))))

@@ -12,6 +12,11 @@
   [{:image/keys [^String registry ^String repository ^String tag]}]
   (ImageReference/of registry repository tag))
 
+(defn   ^TarImage make-tar-image
+  "Returns a new tar image from the provided tarball."
+  [^String tar-path]
+  (TarImage/at (misc/string->java-path tar-path)))
+
 (defn- ^Containerizer make-containerizer
   "Makes a new Jib containerizer object to containerize the application
   to a given tarball."
@@ -23,7 +28,7 @@
                          misc/string->java-path)
         handler-name "vessel.jib.containerizer"]
     (.. Containerizer
-        (to (.. TarImage (at (misc/string->java-path tar-path))
+        (to (.. (make-tar-image tar-path)
                 (named (make-image-reference name))))
         (setBaseImageLayersCache cache-dir)
         (setApplicationLayersCache cache-dir)
@@ -88,15 +93,19 @@
 (defn-   ^JibContainerBuilder make-container-builder
   "Returns a new container builder to start building the image.
 
-  from is a map representing the base image descriptor. The following
-  keys are meaningful: :image/registry, :image/repository
-  and :image/tag. The :image/registry and :image/tag are optional."
+  from is a map representing the base image descriptor. The following keys are
+  meaningful: :image/registry, :image/repository, :image/tag and
+  :image/tar-path. The :image/registry and :image/tag are optional for registry
+  images. The key :image/tar-path indicates that the base image should be loaded
+  from a tarball."
   [from]
-  (let [^ImageReference reference (make-image-reference from)]
-    (.. Jib (from
-             (if (is-in-docker-hub? reference)
-               (str reference)
-               (make-registry-image reference)))
+  (let [base-image (if                (:image/tar-path from)
+                     (make-tar-image (:image/tar-path from))
+                     (let [^ImageReference reference (make-image-reference from)]
+                       (if (is-in-docker-hub? reference)
+                         (str reference)
+                         (make-registry-image reference))))]
+    (.. Jib (from base-image)
         (setCreationTime (misc/now))
         (setFormat ImageFormat/Docker))))
 
