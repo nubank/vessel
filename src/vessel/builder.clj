@@ -7,10 +7,10 @@
             [clojure.string :as string]
             [clojure.tools.namespace.find :as namespace.find]
             [spinner.core :as spinner]
-            [vessel.misc :as misc])
-  (:import clojure.lang.Symbol
+            [vessel.misc :as misc]
+            [vessel.sh :as sh])
+  (:import [clojure.lang Sequential Symbol]
            [java.io File InputStream]
-           [java.net URL URLClassLoader]
            [java.nio.file Files LinkOption]
            java.nio.file.attribute.FileTime
            [java.util.jar JarEntry JarFile]))
@@ -45,42 +45,24 @@
     (get namespaces ns
          (get namespaces (parent-ns ns)))))
 
-(defn- rethrow-compilation-error
-  "Unwrap the actual compilation exception and rethrow it as an
-  ExceptionInfo that will be properly handled by Vessel."
-  [^Symbol main-class throwable]
-  (throw (ex-info (str "Failed to compile " main-class)
-                  #:vessel.error{:category  :vessel/compilation-error
-                                 :throwable (ex-cause (ex-cause throwable))})))
-
-(defn- main-args
-  "Returns a Java array containing the arguments to be passed to
-  clojure.main/-main function."
-  [^Symbol main-class ^File target-dir]
-  (into-array Object [(into-array String
-                                  ["-e"
-                                   (format "(binding [*compile-path* \"%s\"]
-(clojure.core/compile '%s))"
-                                           target-dir (pr-str main-class))])]))
-
-(defn- compile*
-  "Compiles the main-class writing compiled .class files to target-dir.
+(defn- do-compile
+  "Compiles the main-ns by writing compiled .class files to target-dir.
 
   Displays a spin animation during the process."
-  [^Symbol main-class ^File target-dir classpath-files]
-  (let [urls         (into-array URL (map #(.toURL %) classpath-files))
-        class-loader (URLClassLoader. urls (.. ClassLoader getSystemClassLoader getParent))
-        clojure      (.loadClass class-loader "clojure.main")
-        main         (.getDeclaredMethod clojure "main" (into-array Class  [(.getClass (make-array String 0))]))
-        _            (misc/log :info "Compiling %s..." main-class)
-        spin         (spinner/create-and-start!)]
+  [^Symbol main-ns ^Sequential classpath ^File target-dir]
+  (let [forms `(try
+                 (binding [*compile-path*     ~(str target-dir)]
+                   (clojure.core/compile (symbol ~(name main-ns))))
+                 (catch Throwable err#
+                   (println)
+                   (.printStackTrace err#)
+                   (System/exit 1)))
+        _     (misc/log :info "Compiling %s..." main-ns)
+        spin  (spinner/create-and-start!)]
     (try
-      @(future
-         (binding [*out* (java.io.StringWriter.)]
-           (.. Thread currentThread (setContextClassLoader class-loader))
-           (.invoke main nil (main-args main-class target-dir))))
-      (catch Throwable t
-        (rethrow-compilation-error main-class t))
+      (sh/clojure classpath
+                  "--eval"
+                  (pr-str forms))
       (finally
         (spinner/stop! spin)
         (println)))))
@@ -113,7 +95,7 @@
   [classpath-files ^Symbol main-class source-paths ^File target-dir]
   (let [namespaces  (find-namespaces-on-classpath classpath-files)
         classes-dir (misc/make-dir target-dir "classes")
-        _           (compile* main-class classes-dir classpath-files)]
+        _           (do-compile main-class  classpath-files classes-dir)]
     (reduce (fn [result ^File class-file]
               (let [source-file (or (get-class-file-source namespaces (misc/relativize class-file classes-dir))
                                     ;; Defaults to the first element of source-paths if the class file doesn't match any known source.
