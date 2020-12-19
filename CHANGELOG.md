@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 ### Added
 - Accept tarballs as base images: [#23](https://github.com/nubank/vessel/pull/23). This feature will be less obscure and easier to be used in the version 1 of Vessel.
 
+### Fixed
+- Preserve the order of classpath entries to avoid introducing conflicts: [#24](https://github.com/nubank/vessel/pull/24).
+
 ## [0.2.137] - 2020-12-07
 
 ### Fixed

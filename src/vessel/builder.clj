@@ -218,7 +218,7 @@
 
   The options map expects the following keys:
 
-  * :classpath-files (set of java.io.File objects) representing the
+  * :classpath-files (seq of java.io.File objects) representing the
   classpath of the Clojure application;
   * :main-class (symbol) application entrypoint containing
   a :gen-class directive and a -main function;
@@ -238,7 +238,7 @@
   (let [web-inf        (misc/make-dir target-dir "WEB-INF")
         classes        (compile classpath-files main-class source-paths web-inf)
         dirs+jar-files (set/union resource-paths (set (vals classes)))
-        libs           (misc/filter-files (set/difference classpath-files dirs+jar-files))
+        libs           (misc/filter-files (set/difference (set classpath-files) dirs+jar-files))
         resource-files (copy-files dirs+jar-files web-inf)]
     #:app{:classes (merge classes resource-files)
           :lib     (copy-libs libs web-inf)}))
