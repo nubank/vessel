@@ -33,7 +33,7 @@
             ["-c" "--classpath PATHS"
              :id :classpath-files
              :desc "Directories and zip/jar files on the classpath in the same format expected by the java command"
-             :parse-fn (comp set (partial map io/file) #(string/split % #":"))]
+             :parse-fn (comp (partial map io/file) #(string/split % #":"))]
             ["-e" "--extra-path PATH"
              :id :extra-paths
              :desc "extra files to be copied to the container image. The value must be passed in the form source:target or source:target@churn and this option can be repeated many times"

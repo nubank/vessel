@@ -78,9 +78,9 @@
 (deftest build-app-test
   (let [project-dir     (io/file "test/resources/my-app")
         target          (io/file "target/tests/builder-test/build-app-test")
-        classpath-files (set (map io/file (string/split (classpath project-dir) #":")))
+        classpath-files (map io/file (string/split (classpath project-dir) #":"))
         options         {:classpath-files classpath-files
-                         :source-paths  #{(io/file project-dir "src")}
+                         :source-paths    #{(io/file project-dir "src")}
                          :resource-paths  #{(io/file project-dir "resources")}
                          :target-dir      target}
         output          (builder/build-app (assoc options :main-class 'my-app.server))]
