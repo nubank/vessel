@@ -45,11 +45,22 @@
     (get namespaces ns
          (get namespaces (parent-ns ns)))))
 
+(defn compile-java-sources
+  "Compiles Java sources present in the source paths and writes
+  resulting .class files to the supplied target directory."
+  [classpath source-paths ^File target-dir]
+  (let [java-sources (->> source-paths
+                          (map file-seq)
+                          flatten
+                          (filter #(string/ends-with? (.getName %) ".java")))]
+    (when (seq java-sources)
+      (sh/javac classpath target-dir java-sources))))
+
 (defn- do-compile
   "Compiles the main-ns by writing compiled .class files to target-dir.
 
   Displays a spin animation during the process."
-  [^Symbol main-ns ^Sequential classpath ^File target-dir]
+  [^Symbol main-ns ^Sequential classpath source-paths ^File target-dir]
   (let [forms `(try
                  (binding [*compile-path*     ~(str target-dir)]
                    (clojure.core/compile (symbol ~(name main-ns))))
@@ -60,6 +71,7 @@
         _     (misc/log :info "Compiling %s..." main-ns)
         spin  (spinner/create-and-start!)]
     (try
+      (compile-java-sources classpath source-paths target-dir)
       (sh/clojure classpath
                   "--eval"
                   (pr-str forms))
@@ -89,13 +101,13 @@
   "Compiles the ns symbol (that must have a gen-class directive) into a
   set of .class files.
 
-  Returns a map from compiled class files (as instances of
+  Returns a map of compiled class files (as instances of
   java.io.File) to their sources (instances of java.io.File as well
   representing directories or jar files on the classpath)."
   [classpath-files ^Symbol main-class source-paths ^File target-dir]
   (let [namespaces  (find-namespaces-on-classpath classpath-files)
         classes-dir (misc/make-dir target-dir "classes")
-        _           (do-compile main-class  classpath-files classes-dir)]
+        _           (do-compile main-class  classpath-files source-paths classes-dir)]
     (reduce (fn [result ^File class-file]
               (let [source-file (or (get-class-file-source namespaces (misc/relativize class-file classes-dir))
                                     ;; Defaults to the first element of source-paths if the class file doesn't match any known source.
