@@ -1,7 +1,8 @@
 (ns vessel.sh
   "Shell with support for streaming stdout and stderr."
   (:require [clojure.java.io :as io]
-            [clojure.string :as string]))
+            [clojure.string :as string])
+  (:import java.io.File))
 
 (def ^:const encoding
   "Shell encoding."
@@ -48,11 +49,17 @@
     {:args args
      :exit-code exit-code}))
 
+(defn- ^String classpath
+  "Takes a seq of java.io.File objects representing a classpath and
+  returns a string suited to be passed to java and javac commands."
+  [classpath-files]
+  (string/join ":" (map str classpath-files)))
+
 (defn- java-cmd
   "Returns a vector containing the arguments to spawn a Java sub-process."
   [classpath-files]
   [(or (System/getProperty "vessel.sh.java.cmd") "java")
-   "-classpath" (string/join ":" (map str classpath-files))])
+   "-classpath" (classpath classpath-files)])
 
 (defn clojure
   "Calls clojure.main with the supplied classpath and arguments. Throws an
@@ -62,6 +69,26 @@
         (apply exec (concat (java-cmd classpath-files)
                             ["clojure.main"]
                             args))]
+    (when-not (zero? exit-code)
+      (throw (ex-info (str "Sub-process exited with code " exit-code)
+                      result)))))
+
+(defn- javac-cmd
+  "Returns a vector containing the arguments to spawn a Javac sub-process."
+  [classpath-files ^File target-dir sources]
+  (into
+   [(or (System/getProperty "vessel.sh.javac.cmd") "java")
+    "-classpath" (classpath classpath-files)
+    "-d" (str target-dir)]
+   (map str sources)))
+
+(defn javac
+  "Calls javac command with the supplied classpath, target directory and
+  source files. Throws an exception if the sub-process exits with an
+  error."
+  [classpath-files ^File target-dir sources]
+  (let [{:keys [exit-code] :as result}
+        (apply exec (javac-cmd classpath-files target-dir sources))]
     (when-not (zero? exit-code)
       (throw (ex-info (str "Sub-process exited with code " exit-code)
                       result)))))
