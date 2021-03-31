@@ -107,7 +107,8 @@
   [classpath-files ^Symbol main-class source-paths ^File target-dir]
   (let [namespaces  (find-namespaces-on-classpath classpath-files)
         classes-dir (misc/make-dir target-dir "classes")
-        _           (do-compile main-class  classpath-files source-paths classes-dir)]
+        classpath (cons classes-dir classpath-files)
+        _           (do-compile main-class  classpath source-paths classes-dir)]
     (reduce (fn [result ^File class-file]
               (let [source-file (or (get-class-file-source namespaces (misc/relativize class-file classes-dir))
                                     ;; Defaults to the first element of source-paths if the class file doesn't match any known source.

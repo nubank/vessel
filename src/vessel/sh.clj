@@ -77,7 +77,7 @@
   "Returns a vector containing the arguments to spawn a Javac sub-process."
   [classpath-files ^File target-dir sources]
   (into
-   [(or (System/getProperty "vessel.sh.javac.cmd") "java")
+   [(or (System/getProperty "vessel.sh.javac.cmd") "javac")
     "-classpath" (classpath classpath-files)
     "-d" (str target-dir)]
    (map str sources)))
