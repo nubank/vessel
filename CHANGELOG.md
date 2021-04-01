@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.142] - 2021-04-01
+
 ### Added
 - Add support for compiling Java source files present on the classpath: [#25](https://github.com/nubank/vessel/pull/25).
 
