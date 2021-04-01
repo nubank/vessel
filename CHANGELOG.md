@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- Add support for compiling Java source files present on the classpath: [#25](https://github.com/nubank/vessel/pull/25).
+
+### Changed
+- Along with the changes made in [#25](https://github.com/nubank/vessel/pull/25), a new namespace named `sh` was introduced. As of this pull request, Vessel spawns a subshell to run Java in order to call `clojure.core/compile` rather than using a separate classloader.
+
 ## [0.2.140] - 2020-12-19
 
 ### Added
