@@ -22,7 +22,37 @@
 (def vessel
   {:desc "A containerization tool for Clojure applications"
    :commands
-   {"containerize"
+   {"build"
+    {:desc "Build a Clojure application"
+     :fn   api/build
+     :opts [["-c" "--classpath PATHS"
+             :id :classpath-files
+             :desc "Directories and zip/jar files on the classpath in the same format expected by the java command"
+             :parse-fn (comp (partial map io/file) #(string/split % #":"))]
+            ["-s" "--source-path PATH"
+             :id :source-paths
+             :desc "Directories containing source files. This option can be repeated many times"
+             :parse-fn io/file
+             :validate cli/file-or-dir-must-exist
+             :assoc-fn cli/repeat-option]
+            ["-m" "--main-class NAMESPACE"
+             :id :main-class
+             :desc "Namespace that contains the application's entrypoint, with a :gen-class directive and a -main function"
+             :parse-fn symbol]
+            ["-r" "--resource-path PATH"
+             :id :resource-paths
+             :desc "Directories containing resource files. This option can be repeated many times"
+             :parse-fn io/file
+             :validate cli/file-or-dir-must-exist
+             :assoc-fn cli/repeat-option]
+            ["-o" "--output PATH"
+             :id :target-dir
+             :desc "Directory where the application's files will be written to"
+             :parse-fn io/file
+             :validate cli/file-or-dir-must-exist]
+            verbose]}
+
+    "containerize"
     {:desc "Containerize a Clojure application"
      :fn   api/containerize
      :opts [["-a" "--app-root PATH"

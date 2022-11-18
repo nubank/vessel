@@ -119,4 +119,16 @@
                                   "--output" (str (io/file target-dir "my-app2.tar"))
                                   "--source-path" (str (io/file project-dir "src"))
                                   "--resource-path" (str (io/file project-dir "resources"))
-                                  "--verbose"))))))
+                                  "--verbose"))))
+
+             (testing "builds the application"
+               (is (zero?
+                    (vessel/-main "build"
+                                  "--classpath" (classpath project-dir)
+                                  "--source-path" (str (io/file project-dir "src"))
+                                  "--main-class" "my-app.server"
+                                  "--resource-path" (str (io/file project-dir "resources"))
+                                  "--output" (str (io/file target-dir ".build"))
+                                  "--verbose")))
+
+               (is (true? (misc/file-exists? (io/file target-dir ".build")))))))
