@@ -132,4 +132,4 @@
                                   "--output" (str (io/file target-dir "build"))
                                   "--verbose")))
 
-               (is (true? (misc/file-exists? (str (io/file target-dir "build"))))))))
+               (is (true? (misc/file-exists? (io/file target-dir "build")))))))
