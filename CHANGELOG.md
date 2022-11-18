@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.144] - 2022-11-18
+
 ### Added
 - Exposes command for building Clojure application `build`: [#26](https://github.com/nubank/vessel/pull/26).
 
