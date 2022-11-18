@@ -32,6 +32,13 @@
             (image/render-image-spec opts)
             jib.containerizer/containerize)))))
 
+(defn build
+  "Builds a Clojure application."
+  [{:keys [verbose?] :as options}]
+  (binding [misc/*verbose-logs* verbose?]
+    (with-elapsed-time "Successfully built in"
+      (builder/build-app options))))
+
 (defn- write-manifest
   "Writes the manifest to the output as a JSON object."
   [^Writer output manifest]
