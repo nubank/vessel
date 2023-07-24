@@ -7,6 +7,7 @@
            [java.nio.file Files LinkOption Path Paths]
            java.security.MessageDigest
            java.text.DecimalFormat
+           (java.nio.file.attribute FileTime)
            [java.time Duration Instant]
            java.util.function.Consumer
            java.util.Locale))
@@ -198,3 +199,8 @@
         input          (.getBytes (pr-str data) "UTF-8")]
     (.update message-digest input)
     (hex (.digest message-digest))))
+
+(defn set-timestamp
+  [^File file ^Long last-modified-time]
+  (let [^FileTime file-time (FileTime/fromMillis last-modified-time)]
+    (Files/setAttribute (.toPath file) "lastModifiedTime" file-time (make-array LinkOption 0))))

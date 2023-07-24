@@ -6,6 +6,7 @@
             [matcher-combinators.test :refer [match?]]
             [vessel.builder :as builder]
             [vessel.misc :as misc]
+            [vessel.resource-merge :as merge]
             [vessel.test-helpers :refer [classpath ensure-clean-test-dir]])
   (:import java.io.File))
 
@@ -33,7 +34,8 @@
                                      (io/file src "lib2")
                                      (io/file src "lib3/lib3.jar")
                                      (io/file src "lib4")}
-                                   target)]
+                                   target
+                                   merge/base-rules)]
 
     (testing "copies all src files (typically resources) to the target directory
     under the `classes` folder"

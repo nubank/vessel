@@ -8,11 +8,10 @@
             [clojure.tools.namespace.find :as namespace.find]
             [spinner.core :as spinner]
             [vessel.misc :as misc]
+            [vessel.resource-merge :as merge]
             [vessel.sh :as sh])
   (:import [clojure.lang Sequential Symbol]
            [java.io File InputStream]
-           [java.nio.file Files LinkOption]
-           java.nio.file.attribute.FileTime
            [java.util.jar JarEntry JarFile]))
 
 (defn- ^Symbol parent-ns
@@ -117,11 +116,6 @@
             {}
             (misc/filter-files (file-seq classes-dir)))))
 
-(defn- set-timestamp
-  [^File file ^Long last-modified-time]
-  (let [^FileTime file-time (FileTime/fromMillis last-modified-time)]
-    (Files/setAttribute (.toPath file) "lastModifiedTime" file-time (make-array LinkOption 0))))
-
 (defn copy-libs
   "Copies third-party libraries to the lib directory under target-dir.
 
@@ -131,7 +125,7 @@
     (mapv (fn                                                                                                                          [^File lib]
             (let [^File dest-file (io/file lib-dir (.getName lib))]
               (io/copy lib dest-file)
-              (set-timestamp dest-file (.lastModified dest-file))
+              (misc/set-timestamp dest-file (.lastModified dest-file))
               dest-file))
           libs)))
 
@@ -143,62 +137,103 @@
          pr-str
          (spit target))))
 
-(defn- ^File copy
-  "Copies src to target and returns the later one.
+(defn- ^File copy-or-merge
+  "Copies the src InputStreaam to the target file, or merges a file that matches a merge file.
 
-  Gives a special treatment to data-readers, by merging multiple ones
-  into their respective files (data_readers.clj or
-  data_readers.cljc)."
-  [^InputStream src ^File target ^File base-dir ^Long last-modified-time]
-  (let [file-path (.getPath (misc/relativize target base-dir))]
-    (if (re-find #"^data_readers\.cljc?$" file-path)
-      (merge-data-readers src target)
-      (do (io/make-parents target)
-          (io/copy src target)))
-    (set-timestamp target last-modified-time)
-    target))
+  Creates the directory structure for the file.
+
+  Returns a tuple of [merged? merged-paths]; if not merged, the file is copied to target-file.
+
+  If merged? is true, then the merged-paths is updated but no file is written yet."
+  [^File classpath-root ^InputStream src ^File target-file last-modified-time merge-rules merged-paths]
+  (io/make-parents target-file)
+  (let [[merged? _merged-paths' :as result] (merge/execute-merge-rules classpath-root
+                                                                       src
+                                                                       target-file
+                                                                       last-modified-time
+                                                                       merge-rules
+                                                                       merged-paths)]
+    (when-not merged?
+      (io/copy src target-file)
+      (misc/set-timestamp target-file last-modified-time))
+    result))
+
+(defn- copy-or-merge-files
+  [classpath-root merge-rules merged-paths files]
+  (let [
+        f (fn [{:keys [result merged-paths]} {:keys [^File target-file ^InputStream input-stream last-modified]}]
+            (let [[merged? merged-paths'] (copy-or-merge classpath-root
+                                                         input-stream
+                                                         target-file
+                                                         last-modified
+                                                         merge-rules
+                                                         merged-paths)]
+              {:result       (cond-> result (not merged?) (conj target-file))
+               :merged-paths merged-paths'}))
+        {:keys [result merged-paths]} (reduce f
+                                              {:result       []
+                                               :merged-paths merged-paths}
+                                              files)]
+    [result merged-paths]))
 
 (defn- copy-files-from-jar
   "Copies files from within the jar file to the target directory."
-  [^File jar ^File target-dir]
-  (with-open [jar-file (JarFile. jar)]
+  [^File jar-root ^File target-dir merge-rules merged-paths]
+  (with-open [jar-file (JarFile. jar-root)]
     (->> jar-file
          .entries
          enumeration-seq
-         (mapv (fn [^JarEntry jar-entry]
-                 (let [^File target-file (io/file target-dir (.getName jar-entry))]
-                   (when-not (.isDirectory jar-entry)
-                     (copy (.getInputStream jar-file jar-entry) target-file target-dir (.getTime jar-entry)))))))))
+
+         (remove #(.isDirectory ^JarEntry %))
+         (map (fn [^JarEntry entry]
+                {:target-file   (io/file target-dir (.getName entry))
+                 :input-stream  (.getInputStream jar-file entry)
+                 :last-modified (.getTime entry)}))
+         (copy-or-merge-files jar-root merge-rules merged-paths))))
 
 (defn- copy-files-from-dir
   "Copies files (typically resources) from source to target."
-  [^File src ^File target-dir]
-  (->> src
+  [^File dir-root ^File target-dir merge-rules merged-paths]
+  (->> dir-root
        file-seq
        misc/filter-files
-       (mapv (fn [^File file]
-               (let [target-file (io/file target-dir (misc/relativize file src))]
-                 (copy (io/input-stream file) target-file target-dir (.lastModified file)))))))
+       (map (fn [^File file]
+              {:target-file   (io/file target-dir (misc/relativize file dir-root))
+               :input-stream  (io/input-stream file)
+               :last-modified (.lastModified file)}))
+       (copy-or-merge-files dir-root merge-rules merged-paths)))
 
 (defn- copy-files*
-  [^File src ^File target-dir]
-  (if (.isDirectory src)
-    (copy-files-from-dir src target-dir)
-    (copy-files-from-jar src target-dir)))
+  "Copies files from a classpath root to the target directory.
+
+  Returns a tuple of [copied-files merged-paths]; copied files are files in the target
+  directory, merged-paths is a map of data for any files that are require merge logic."
+  [^File classpath-root ^File target-dir merge-rules merged-paths]
+  (let [f (if (.isDirectory classpath-root) copy-files-from-dir copy-files-from-jar)]
+    (f classpath-root target-dir merge-rules merged-paths)))
 
 (defn copy-files
-  "Iterates over the files (typically directories and jar files) by
-  copying their content to the target directory. Data
-  readers (declared in data_readers.clj or data_readers.cljc in the
-  root of the classpath) are merged together into their respective
-  files.
+  "Iterates over the classpath roots (source directories or library jars) and copies
+  all files within to the target directory (on the file system).
 
-  Returns a map from target files to their sources."
-  [classpath-files ^File target-dir]
-  (let [classes-dir (misc/make-dir target-dir "classes")]
-    (->> classpath-files
-         (mapcat #(map vector (remove nil? (copy-files* % classes-dir)) (repeat %)))
-         (into {}))))
+  Certain kinds of files (such as `data_readers.clj`) may occur multiple times, and
+  must be merged.  The merge-rules argument is a list of rules to apply,
+  see the [[base-rules]].
+
+  Output files have the same last modified time as source files.
+
+  Returns a map from target files (a File) to their source classpath root."
+  [classpath-roots ^File target-dir merge-rules]
+  (let [classes-dir (misc/make-dir target-dir "classes")
+        f           (fn [{:keys [result merged-paths]} source-dir]
+                      (let [[output-files merged-paths'] (copy-files* source-dir classes-dir merge-rules merged-paths)
+                            result' (->> output-files
+                                         (remove nil?)
+                                         (reduce #(assoc %1 %2 source-dir) result))]
+                        {:result       result'
+                         :merged-paths merged-paths'}))
+        {:keys [result merged-paths]} (reduce f nil classpath-roots)]
+    (merge result (merge/write-merged-paths merged-paths))))
 
 (defn build-app
   "Builds the Clojure application.
@@ -224,7 +259,7 @@
 
   Returns a map containing the following namespaced keys:
   * :app/classes - a map from target files (compiled class files and
-  resources) to their sources (either directories or jar files present
+  resources) to their source classpath root (either directories or jar files present
   on the classpath);
   * :app/lib - a sequence of java.io.File objects containing libraries
   that the application depends on."
@@ -234,6 +269,6 @@
         classes        (compile classpath-files main-class source-paths web-inf)
         dirs+jar-files (set/union resource-paths (set (vals classes)))
         libs           (misc/filter-files (set/difference (set classpath-files) dirs+jar-files))
-        resource-files (copy-files dirs+jar-files web-inf)]
+        resource-files (copy-files dirs+jar-files web-inf merge/base-rules)]
     #:app{:classes (merge classes resource-files)
           :lib     (copy-libs libs web-inf)}))
