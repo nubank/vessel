@@ -6,7 +6,6 @@
             [matcher-combinators.test :refer [match?]]
             [vessel.builder :as builder]
             [vessel.misc :as misc]
-            [vessel.resource-merge :as merge]
             [vessel.test-helpers :refer [classpath ensure-clean-test-dir]])
   (:import java.io.File))
 
@@ -55,8 +54,18 @@
               (io/file target "classes/META-INF/MANIFEST.MF") (io/file src "lib3/lib3.jar")
               (io/file target "classes/data_readers.clj")     (io/file src "lib2")
               (io/file target "classes/data_readers.cljc")    (io/file src "lib4")
-              (io/file target "classes/resource1.edn")        (io/file src "lib1")}
+              ;; resource1 is merged, last read file is in lib2
+              (io/file target "classes/resource1.edn")        (io/file src "lib2")}
              output)))
+
+    (testing "edn files are merged"
+      ;; This is the deep merge of the two copies of resource1:
+      (is (= {:list    [1 2 3]
+              :map     {:a 2
+                        :b 3}
+              :new-key 4}
+             (-> (io/file target "classes/resource1.edn")
+                 misc/read-edn))))
 
     (testing "multiple data-readers (either data_readers.clj or
     data_readers.cljc files) found at the root of the classpath are merged into
@@ -69,8 +78,12 @@
              (misc/read-edn (io/file target "classes/data_readers.cljc")))))
 
     (testing "preserve timestamps when copying files"
-      (is (=              (.lastModified (io/file src "lib1/resource1.edn"))
-                          (.lastModified (io/file target "classes/resource1.edn")))))))
+      ;; This file is simply copied:
+      (is (= (.lastModified (io/file src "lib2/libs2/resource2.edn"))
+             (.lastModified (io/file target "classes/lib2/resource2.edn"))))
+      ;; resource1 is merged, last version in lib2
+      (is (= (.lastModified (io/file src "lib2/resource1.edn"))
+             (.lastModified (io/file target "classes/resource1.edn")))))))
 
 (defn get-file-names
   [^File dir]
