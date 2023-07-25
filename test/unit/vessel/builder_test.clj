@@ -34,8 +34,7 @@
                                      (io/file src "lib2")
                                      (io/file src "lib3/lib3.jar")
                                      (io/file src "lib4")}
-                                   target
-                                   merge/base-rules)]
+                                   target)]
 
     (testing "copies all src files (typically resources) to the target directory
     under the `classes` folder"
