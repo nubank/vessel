@@ -134,9 +134,10 @@
   that are copied."
   [classpath-root merge-set files]
   (let [f (fn [result file]
-            (let [{:keys [target-file ^InputStream input-stream last-modified]} file
+            (let [{:keys [target-file input-stream last-modified]} file
+                  input-stream' ^InputStream (input-stream)
                   merged? (merge/execute-merge-rules classpath-root
-                                                     input-stream
+                                                     input-stream'
                                                      target-file
                                                      last-modified
                                                      merge-set)]
@@ -144,8 +145,8 @@
                 result
                 (do
                   (io/make-parents target-file)
-                  (io/copy input-stream target-file)
-                  (.close input-stream)
+                  (io/copy input-stream' target-file)
+                  (.close input-stream')
                   (misc/set-timestamp target-file last-modified)
                   (conj result target-file)))))]
     (reduce f [] files)))
@@ -159,10 +160,8 @@
          enumeration-seq
          (remove #(.isDirectory ^JarEntry %))
          (map (fn [^JarEntry entry]
-                ;; Because map is lazy, but reduce is strict, should not have more than 32 input streams
-                ;; open at any time.
                 {:target-file   (io/file target-dir (.getName entry))
-                 :input-stream  (.getInputStream jar-file entry)
+                 :input-stream  #(.getInputStream jar-file entry)
                  :last-modified (.getTime entry)}))
          (copy-or-merge-files jar-root merge-set))))
 
@@ -174,7 +173,7 @@
        misc/filter-files
        (map (fn [^File file]
               {:target-file   (io/file target-dir (misc/relativize file file-system-root))
-               :input-stream  (io/input-stream file)
+               :input-stream  #(io/input-stream file)
                :last-modified (.lastModified file)}))
        (copy-or-merge-files file-system-root merge-set)))
 
@@ -194,8 +193,7 @@
   all files within to the target directory (on the file system).
 
   Certain kinds of files (such as `data_readers.clj`) may occur multiple times, and
-  must be merged.  The merge-rules argument is a list of rules to apply,
-  see the [[base-rules]].
+  must be merged.
 
   Output files have the same last modified time as source files.
 
