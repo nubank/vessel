@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.146] - 2023-08-10
+
 - Resources with the extension `.edn` are deep merged together: [#29](https://github.com/nubank/vessel/pull/29).
 
 ## [0.2.144] - 2022-11-18
