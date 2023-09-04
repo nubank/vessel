@@ -35,7 +35,7 @@
   data_readers.clj/cljc - merged together
   *.edn - deep merged together"
   [{:match-fn #(re-find #"/data_readers.cljc?$" (.getPath ^File %))
-    :read-fn  misc/read-edn
+    :read-fn  misc/read-data
     :merge-fn merge
     :write-fn write-edn}
    {:match-fn #(.endsWith ".edn" (.getPath ^File %))
@@ -104,4 +104,3 @@
         (assoc result target-file classpath-root)))
     {}
     (-> merge-set ::*merged-paths deref)))
-

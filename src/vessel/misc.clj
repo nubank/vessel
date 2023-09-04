@@ -175,6 +175,18 @@
   [input]
   (edn/read-string (slurp input)))
 
+(defn read-data
+  "Reads one object from the provided input.
+
+  input can be any object supported by clojure.core/slurp.
+
+  Note: this function is meant to be used to parse objects from
+  data_readers files."
+  [input]
+  (binding [*read-eval* false]
+    (read-string {:read-cond :preserve :features #{:clj}}
+                 (slurp input))))
+
 (defn read-json
   "Reads a JSON object and parses it as Clojure data.
 

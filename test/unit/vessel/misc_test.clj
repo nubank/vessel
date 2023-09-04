@@ -153,6 +153,11 @@
   (is (= {:greeting "Hello!"}
          (misc/read-edn (StringReader. "{:greeting \"Hello!\"}")))))
 
+(deftest read-data-test
+  (is (= {'x (reader-conditional '(:clj foo.bar/x-clj :cljs foo.bar/x-cljs) false)}
+         (misc/read-data
+          (StringReader. "{x #?(:clj foo.bar/x-clj :cljs foo.bar/x-cljs)}")))))
+
 (deftest read-json-test
   (is (= {:greeting "Hello!"}
          (misc/read-json (StringReader. "{\"greeting\" : \"Hello!\"}")))))
