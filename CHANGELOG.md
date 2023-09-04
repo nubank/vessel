@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.148] - 2023-09-04
+
 ### Changed
 
 - Use the newly created function misc/read-data to read/merge data_readers instead of the misc/read-edn function. The former preserves reader conditionals [#31](https://github.com/nubank/vessel/pull/31).
