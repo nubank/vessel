@@ -6,6 +6,7 @@
             [matcher-combinators.test :refer [match?]]
             [vessel.builder :as builder]
             [vessel.misc :as misc]
+            [vessel.sh :as sh]
             [vessel.test-helpers :refer [classpath ensure-clean-test-dir]])
   (:import java.io.File))
 
@@ -130,3 +131,21 @@
         (is (thrown-match? clojure.lang.ExceptionInfo
                            #:vessel.error{:category :vessel/compilation-error}
                            (builder/build-app (assoc options :main-class 'my-app.compilation-error)))))))
+
+(deftest use-provided-compiler-options-when-building-app-test
+  (let [project-dir     (io/file "test/resources/my-app")
+        target          (io/file "target/tests/builder-test/build-app-test")
+        classpath-files (map io/file (string/split (classpath project-dir) #":"))
+        options         {:classpath-files  classpath-files
+                         :resource-paths   #{(io/file project-dir "src")}
+                         :source-paths     #{(io/file project-dir "resources")}
+                         :target-dir       target
+                         :main-class       'my-app.server
+                         :compiler-options {:direct-linking true
+                                            :testing?       true}}
+        sh-args         (atom [])]
+    (with-redefs [sh/javac   (constantly nil)
+                  sh/clojure #(reset! sh-args [%1 %2 %3])]
+      (builder/build-app options))
+
+    (is (re-matches #".*clojure\.core/\*compiler-options\* \(clojure\.core/merge clojure\.core/\*compiler-options\* \{:direct-linking true, :testing\? true\}\).*" (last @sh-args)))))

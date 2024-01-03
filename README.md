@@ -6,6 +6,19 @@ A containerization tool for Clojure applications. It uses [Google Jib](https://g
 
 ## Usage
 
+> `build`:
+
+Build a Clojure application
+
+| Option | Default | Description |
+| -- | -- | -- |
+| `-c` `--classpath PATHS` | `--` | Directories and zip/jar files on the classpath in the same format expected by the java command |
+| `-s` `--source-path PATH` | `--` | Directories containing source files. This option can be repeated many times |
+| `-m` `--main-class NAMESPACE` | `--` | Namespace that contains the application's entrypoint, with a :gen-class directive and a -main function |
+| `-r` `--resource-path PATH` | `--` | Directories containing resource files. This option can be repeated many times |
+| `-o` `--output PATH` | `--` | Directory where the application's files will be written to |
+| `-C` `--compiler-options OPTIONS` | No | Options provided to the Clojure compiler, see `clojure.core/*compiler-options*` |
+
 > `containerize`:
 
 Containerize a Clojure application
@@ -24,6 +37,7 @@ Containerize a Clojure application
 | `-s` `--source-path PATH` | `--` | Directories containing source files. This option can be repeated many times |
 | `-r` `--resource-path PATH` | `--` | Directories containing resource files. This option can be repeated many times |
 | `-u` `--user USER` | `root` | Define the default user for the image |
+| `-C` `--compiler-options OPTIONS` | `nil` | Options provided to the Clojure compiler, see `clojure.core/*compiler-options*` |
 
 > `image`:
 
