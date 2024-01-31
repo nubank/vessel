@@ -56,7 +56,7 @@
              :desc "Options provided to the Clojure compiler, see clojure.core/*compiler-options*"
              :default nil
              :parse-fn edn/read-string
-             :validate [#(or (nil? %) (map? %)) "Compiler options must be a valid Clojure map"]]
+             :validate cli/compiler-options-must-be-nil-or-map]
             verbose]}
 
     "containerize"
@@ -127,7 +127,7 @@
              :desc "Options provided to the Clojure compiler, see clojure.core/*compiler-options*"
              :default nil
              :parse-fn edn/read-string
-             :validate [#(or (nil? %) (map? %)) "Compiler options must be a valid Clojure map"]]
+             :validate cli/compiler-options-must-be-nil-or-map]
             verbose]}
 
     "image"
