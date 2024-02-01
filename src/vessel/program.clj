@@ -1,6 +1,7 @@
 (ns vessel.program
   (:gen-class)
-  (:require [clojure.java.io :as io]
+  (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
             [clojure.string :as string]
             [vessel.api :as api]
             [vessel.cli :as cli]
@@ -50,6 +51,12 @@
              :desc "Directory where the application's files will be written to"
              :parse-fn io/file
              :validate cli/file-or-dir-must-exist]
+            ["-C" "--compiler-options OPTIONS"
+             :id :compiler-options
+             :desc "Options provided to the Clojure compiler, see clojure.core/*compiler-options*"
+             :default nil
+             :parse-fn edn/read-string
+             :validate cli/compiler-options-must-be-nil-or-map]
             verbose]}
 
     "containerize"
@@ -115,6 +122,12 @@
              :id :user
              :desc "Define the default user for the image"
              :default "root"]
+            ["-C" "--compiler-options OPTIONS"
+             :id :compiler-options
+             :desc "Options provided to the Clojure compiler, see clojure.core/*compiler-options*"
+             :default nil
+             :parse-fn edn/read-string
+             :validate cli/compiler-options-must-be-nil-or-map]
             verbose]}
 
     "image"

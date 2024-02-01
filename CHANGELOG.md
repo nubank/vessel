@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Add option to define options for the Clojure compiler when building and containerizing an application: [#32](https://github.com/nubank/vessel/pull/32).
+  See the [Clojure documentation](https://clojure.org/reference/compilation#_compiler_options) for more details. 
+
 ## [0.2.148] - 2023-09-04
 
 ### Changed

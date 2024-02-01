@@ -193,3 +193,6 @@ Please, specify extra paths in the form source:target or source:target@churn.")
 (defn repeat-option
   [m k v]
   (update-in m [k] (fnil conj #{}) v))
+
+(def compiler-options-must-be-nil-or-map
+  [#(or (nil? %) (map? %)) "Compiler options must be a valid Clojure map"])

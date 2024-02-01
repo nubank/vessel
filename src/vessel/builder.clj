@@ -59,9 +59,10 @@
   "Compiles the main-ns by writing compiled .class files to target-dir.
 
   Displays a spin animation during the process."
-  [^Symbol main-ns ^Sequential classpath source-paths ^File target-dir]
+  [^Symbol main-ns ^Sequential classpath source-paths ^File target-dir compiler-options]
   (let [forms `(try
-                 (binding [*compile-path*     ~(str target-dir)]
+                 (binding [*compile-path*     ~(str target-dir)
+                           *compiler-options* (merge *compiler-options* ~compiler-options)]
                    (clojure.core/compile (symbol ~(name main-ns))))
                  (catch Throwable err#
                    (println)
@@ -103,11 +104,11 @@
   Returns a map of compiled class files (as instances of
   java.io.File) to their sources (instances of java.io.File as well
   representing directories or jar files on the classpath)."
-  [classpath-files ^Symbol main-class source-paths ^File target-dir]
+  [classpath-files ^Symbol main-class source-paths ^File target-dir compiler-options]
   (let [namespaces  (find-namespaces-on-classpath classpath-files)
         classes-dir (misc/make-dir target-dir "classes")
         classpath (cons classes-dir classpath-files)
-        _           (do-compile main-class  classpath source-paths classes-dir)]
+        _           (do-compile main-class  classpath source-paths classes-dir compiler-options)]
     (reduce (fn [result ^File class-file]
               (let [source-file (or (get-class-file-source namespaces (misc/relativize class-file classes-dir))
                                     ;; Defaults to the first element of source-paths if the class file doesn't match any known source.
@@ -230,16 +231,21 @@
   * :target-dir (java.io.File) an existing directory where the
   application's files will be written to.
 
+  And it accepts the following optional keys:
+
+  * :compiler-options (map) options for the Clojure compiler, refer
+  to `clojure.core/*compiler-options*` for the supported keys.
+
   Returns a map containing the following namespaced keys:
   * :app/classes - a map from target files (compiled class files and
   resources) to their source classpath root (either directories or jar files present
   on the classpath);
   * :app/lib - a sequence of java.io.File objects containing libraries
   that the application depends on."
-  [{:keys [classpath-files ^Symbol main-class resource-paths source-paths ^File target-dir]}]
+  [{:keys [classpath-files ^Symbol main-class resource-paths source-paths ^File target-dir compiler-options]}]
   {:pre [classpath-files main-class source-paths target-dir]}
   (let [web-inf        (misc/make-dir target-dir "WEB-INF")
-        classes        (compile classpath-files main-class source-paths web-inf)
+        classes        (compile classpath-files main-class source-paths web-inf compiler-options)
         dirs+jar-files (set/union resource-paths (set (vals classes)))
         libs           (misc/filter-files (set/difference (set classpath-files) dirs+jar-files))
         resource-files (copy-files dirs+jar-files web-inf)]
