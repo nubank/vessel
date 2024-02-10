@@ -20,6 +20,9 @@
     (sequential? left)
     (into left right)
 
+    (set? left)
+    (into left right)
+
     :else
     right))
 
@@ -38,7 +41,7 @@
     :read-fn  misc/read-data
     :merge-fn merge
     :write-fn write-edn}
-   {:match-fn #(.endsWith ".edn" (.getPath ^File %))
+   {:match-fn #(.endsWith (.getPath ^File %) ".edn")
     :read-fn  misc/read-edn
     :merge-fn deep-merge
     :write-fn write-edn}])

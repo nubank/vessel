@@ -61,10 +61,14 @@
 
     (testing "edn files are merged"
       ;; This is the deep merge of the two copies of resource1:
-      (is (= {:list    [1 2 3]
-              :map     {:a 2
-                        :b 3}
-              :new-key 4}
+      (is (= {:list     [1 2 3 4 4 5 6]
+              :map      {:a 2
+                         :b 3
+                         :c 4}
+              :set      #{1 2 3}
+              :old-key  4
+              :new-key  4
+              :same-key :new-value}
              (-> (io/file target "classes/resource1.edn")
                  misc/read-edn))))
 

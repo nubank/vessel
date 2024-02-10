@@ -1,2 +1,6 @@
-{:list [1 2 3]
- :map {:a 1}}
+{:list     [1 2 3 4]
+ :map      {:a 1
+            :c 4}
+ :set      #{1 2}
+ :old-key  4
+ :same-key :old-value}
