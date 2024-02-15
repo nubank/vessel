@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.154] - 2024-02-15
+
 - Fix the logic in the function that checks if a file ends with `.edn`: [#36](https://github.com/nubank/vessel/pull/36).
 
 ## [0.2.152] - 2024-02-01
