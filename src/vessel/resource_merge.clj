@@ -20,6 +20,9 @@
     (sequential? left)
     (into left right)
 
+    (set? left)
+    (into left right)
+
     :else
     right))
 
@@ -29,19 +32,23 @@
 ;; :merge-fn (fn [old-value, new-value]) -> merged-value
 ;; :write-fn (fn [File, value]) -> nil (but writes the merged value)
 
-(def base-rules
-  "Basic rules:
+(def data-readers-base-rule
+  "data_raders.clj/cljc - merged together"
+  {:match-fn #(re-find #"/data_readers.cljc?$" (.getPath ^File %))
+   :read-fn  misc/read-data
+   :merge-fn merge
+   :write-fn write-edn})
 
-  data_readers.clj/cljc - merged together
-  *.edn - deep merged together"
-  [{:match-fn #(re-find #"/data_readers.cljc?$" (.getPath ^File %))
-    :read-fn  misc/read-data
-    :merge-fn merge
-    :write-fn write-edn}
-   {:match-fn #(.endsWith ".edn" (.getPath ^File %))
-    :read-fn  misc/read-edn
-    :merge-fn deep-merge
-    :write-fn write-edn}])
+(def edn-base-rule
+  "*.edn - deep merged together"
+  {:match-fn #(.endsWith (.getPath ^File %) ".edn")
+   :read-fn  misc/read-edn
+   :merge-fn deep-merge
+   :write-fn write-edn})
+
+(def base-rules
+  [data-readers-base-rule
+   edn-base-rule])
 
 (defn new-merge-set
   "Creates a new merge set, with the provided rules (or [[base-rules]] as a default).
@@ -72,15 +79,19 @@
                                                 :last-modified  last-modified
                                                 :value          new-value}))))))
 
+(defn find-matching-rule
+  [rules file]
+  (some (fn [rule]
+          (when ((:match-fn rule) file)
+            rule))
+        rules))
+
 (defn execute-merge-rules
   "Evaluates the inputs against the rules in the provided merge set.  Returns true
   if the file is subject to a merge rule (in which case, it should not be simply copied)."
   [classpath-root input-stream target-file last-modified merge-set]
   (let [{::keys [rules]} merge-set
-        matched-rule (some (fn [rule]
-                             (when ((:match-fn rule) target-file)
-                               rule))
-                           rules)]
+        matched-rule (find-matching-rule rules target-file)]
     (if matched-rule
       (do
         (apply-rule classpath-root input-stream target-file last-modified matched-rule merge-set)
