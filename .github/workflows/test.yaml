@@ -13,10 +13,10 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses:       actions/checkout@v2
+      uses:       actions/checkout@v4
 
     - name: Cache Maven deps
-      uses: actions/cache@v1
+      uses: actions/cache@v4
       env:
         cache-name: maven-deps
       with:
@@ -46,10 +46,10 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses:       actions/checkout@v2
+      uses:       actions/checkout@v4
 
     - name: Cache Maven deps
-      uses: actions/cache@v1
+      uses: actions/cache@v4
       env:
         cache-name: maven-deps
       with:
