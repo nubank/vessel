@@ -8,7 +8,7 @@ jobs:
   unit-test:
     runs-on: ubuntu-latest
     container:
-      image: circleci/clojure:openjdk-11-tools-deps-1.10.1.502
+      image: cimg/clojure:1.11.1
       options: -u 1001:115
 
     steps:
@@ -33,7 +33,7 @@ jobs:
   integration-test:
     runs-on: ubuntu-latest
     container:
-      image: circleci/clojure:openjdk-11-tools-deps-1.10.1.502
+      image: cimg/clojure:1.11.1
       env:
         VESSEL_TEST_REGISTRY: registry
       options: -u 1001:115

@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix GitHub Actions Workflows: [#40](https://github.com/nubank/vessel/pull/40).
+- Handle reader macros when merging EDN files [#39](https://github.com/nubank/vessel/pull/39).
+
 ## [0.2.154] - 2024-02-15
 
 - Fix the logic in the function that checks if a file ends with `.edn`: [#36](https://github.com/nubank/vessel/pull/36).
@@ -15,7 +20,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - Add option to define options for the Clojure compiler when building and containerizing an application: [#32](https://github.com/nubank/vessel/pull/32).
-  See the [Clojure documentation](https://clojure.org/reference/compilation#_compiler_options) for more details. 
+  See the [Clojure documentation](https://clojure.org/reference/compilation#_compiler_options) for more details.
 
 ## [0.2.148] - 2023-09-04
 
