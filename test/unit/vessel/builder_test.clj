@@ -90,6 +90,17 @@
       (is (= (.lastModified (io/file src "lib2/resource1.edn"))
              (.lastModified (io/file target "classes/resource1.edn")))))))
 
+(deftest merge-with-reader-macros
+  (let [src    (io/file "test/resources")
+        target (io/file "target/tests/builder-test/reader-macros")
+        _      (builder/copy-files #{(io/file src "lib5")
+                                     (io/file src "lib6")}
+                                   target)]
+
+    (testing "edn files with reader macros are merged"
+      (is (= (slurp (io/file target "classes" "with-reader-macros.edn"))
+             "{:k1 :override-k1, :k2 #unknown/macro :v2, :k3 #weird/macro :v3}")))))
+
 (defn get-file-names
   [^File dir]
   (map #(.getName %) (.listFiles dir)))

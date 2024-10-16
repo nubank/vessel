@@ -1,8 +1,9 @@
 (ns vessel.resource-merge
   "Support for merging duplicated resources on the classpath."
-  (:require [clojure.java.io :as io]
+  (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
             [vessel.misc :as misc])
-  (:import (java.io File InputStream)))
+  (:import (java.io File InputStream PushbackReader)))
 
 
 (defn- write-edn
@@ -26,6 +27,14 @@
     :else
     right))
 
+(defn read-edn
+  "Reads an InputStream as EDN but uses a tagged literal for any reader macros found in the stream."
+  [input-stream]
+  (->> input-stream
+       io/reader
+       PushbackReader.
+       (edn/read {:default tagged-literal})))
+
 ;; A rule is a map:
 ;; :match-fn (fn [File]) -> boolean (File is the output file)
 ;; :read-fn (fn [InputStream]) -> value
@@ -42,7 +51,7 @@
 (def edn-base-rule
   "*.edn - deep merged together"
   {:match-fn #(.endsWith (.getPath ^File %) ".edn")
-   :read-fn  misc/read-edn
+   :read-fn  read-edn
    :merge-fn deep-merge
    :write-fn write-edn})
 
