@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.157] - 2024-10-16
+
 ### Fixed
 
 - Fix GitHub Actions Workflows: [#40](https://github.com/nubank/vessel/pull/40).
