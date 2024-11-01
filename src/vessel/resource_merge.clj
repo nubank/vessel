@@ -108,7 +108,7 @@
   "Evaluates the inputs against the rules in the provided merge set.  Returns true
   if the file is subject to a merge rule (in which case, it should not be simply copied).
 
-  classpath-root - root of classpath; a File that is either a director or a Jar file
+  classpath-root - origin of the input, a File; either a directory or a JAR file
   input-source - string describing where the input-stream comes from
   input-stream - InputStream containing content of the file
   target-file - File to write from the input stream (or merged)
