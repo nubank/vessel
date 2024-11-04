@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- Replace hub with gh in the release script: [#42](https://github.com/nubank/vessel/pull/42).
+
+### Fixed
+
+- Detect and report errors reading mergeable sources: [#41](https://github.com/nubank/vessel/pull/41).
+
 ## [0.2.157] - 2024-10-16
 
 ### Fixed
