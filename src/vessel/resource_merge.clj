@@ -70,11 +70,20 @@
     ::*merged-paths (atom {})}))
 
 (defn- apply-rule
-  [classpath-root ^InputStream input-stream target-file last-modified rule merge-set]
+  [classpath-root input-source ^InputStream input-stream target-file last-modified rule merge-set]
   (let [{::keys [*merged-paths]} merge-set
         {:keys [read-fn merge-fn]} rule
-        new-value (read-fn input-stream)]
-    (.close input-stream)
+        new-value (try
+                    (read-fn input-stream)
+                    (catch Throwable t
+                      (throw (ex-info (str "Unable to read " input-source ": "
+                                           (or (ex-message t)
+                                               (-> t class .getName)))
+                                      {:classpath-root classpath-root
+                                       :input-source   input-source
+                                       :target-file    target-file})))
+                    (finally
+                      (.close input-stream)))]
     (swap! *merged-paths
            (fn [merged-paths]
              (if (contains? merged-paths target-file)
@@ -97,13 +106,20 @@
 
 (defn execute-merge-rules
   "Evaluates the inputs against the rules in the provided merge set.  Returns true
-  if the file is subject to a merge rule (in which case, it should not be simply copied)."
-  [classpath-root input-stream target-file last-modified merge-set]
+  if the file is subject to a merge rule (in which case, it should not be simply copied).
+
+  classpath-root - origin of the input, a File; either a directory or a JAR file
+  input-source - string describing where the input-stream comes from
+  input-stream - InputStream containing content of the file
+  target-file - File to write from the input stream (or merged)
+  last-modified - timestamp of last modified time to be applied to the final output
+  merge-set - mutable object containing details about merging"
+  [classpath-root input-source input-stream target-file last-modified merge-set]
   (let [{::keys [rules]} merge-set
         matched-rule (find-matching-rule rules target-file)]
     (if matched-rule
       (do
-        (apply-rule classpath-root input-stream target-file last-modified matched-rule merge-set)
+        (apply-rule classpath-root input-source input-stream target-file last-modified matched-rule merge-set)
         true)
       false)))
 

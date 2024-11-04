@@ -7,8 +7,10 @@
             [vessel.builder :as builder]
             [vessel.misc :as misc]
             [vessel.sh :as sh]
+            [babashka.fs :as fs]
             [vessel.test-helpers :refer [classpath ensure-clean-test-dir]])
-  (:import java.io.File))
+  (:import java.io.File
+           (clojure.lang ExceptionInfo)))
 
 (use-fixtures :once (ensure-clean-test-dir))
 
@@ -164,3 +166,31 @@
       (builder/build-app options))
 
     (is (re-matches #".*clojure\.core/\*compiler-options\* \(clojure\.core/merge clojure\.core/\*compiler-options\* \{:direct-linking true, :testing\? true\}\).*" (last @sh-args)))))
+
+(deftest reports-errors-when-merging-from-dir
+  (let [src    (io/file "test/resources")
+        badlib (io/file src "badlib")
+        target (io/file "target/tests/build-test/merge-errors")
+        e      (is (thrown? ExceptionInfo
+                            (builder/copy-files #{badlib} target)))]
+    (when e
+      (is (= "Unable to read test/resources/badlib/bad-input.edn: Map literal must contain an even number of forms" (ex-message e)))
+      (is (match? {:classpath-root badlib
+                   :input-source   "test/resources/badlib/bad-input.edn"
+                   :target-file    (m/via str (str target "/classes/bad-input.edn"))}
+                  (ex-data e))))))
+
+(deftest reports-errors-when-merging-from-jar
+  (let [src        (io/file "test/resources")
+        badlib     (io/file src "badlib")
+        badlib-jar (io/file "target/badlib.jar")
+        _          (fs/zip badlib-jar badlib {:root "test/resources/badlib"})
+        target     (io/file "target/tests/build-test/merge-errors")
+        e          (is (thrown? ExceptionInfo
+                                (builder/copy-files #{badlib-jar} target)))]
+    (when e
+      (is (= "Unable to read target/badlib.jar#bad-input.edn: Map literal must contain an even number of forms" (ex-message e)))
+      (is (match? {:classpath-root (m/via str "target/badlib.jar")
+                   :input-source   "target/badlib.jar#bad-input.edn"
+                   :target-file    (m/via str (str target "/classes/bad-input.edn"))}
+                  (ex-data e))))))

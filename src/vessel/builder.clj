@@ -6,7 +6,6 @@
             [clojure.set :as set]
             [clojure.string :as string]
             [clojure.tools.namespace.find :as namespace.find]
-            [spinner.core :as spinner]
             [vessel.misc :as misc]
             [vessel.resource-merge :as merge]
             [vessel.sh :as sh])
@@ -56,9 +55,7 @@
       (sh/javac classpath target-dir java-sources))))
 
 (defn- do-compile
-  "Compiles the main-ns by writing compiled .class files to target-dir.
-
-  Displays a spin animation during the process."
+  "Compiles the main-ns by writing compiled .class files to target-dir."
   [^Symbol main-ns ^Sequential classpath source-paths ^File target-dir compiler-options]
   (let [forms `(try
                  (binding [*compile-path*     ~(str target-dir)
@@ -68,16 +65,12 @@
                    (println)
                    (.printStackTrace err#)
                    (System/exit 1)))
-        _     (misc/log :info "Compiling %s..." main-ns)
-        spin  (spinner/create-and-start!)]
+        _     (misc/log :info "Compiling %s..." main-ns)]
     (try
       (compile-java-sources classpath source-paths target-dir)
       (sh/clojure classpath
                   "--eval"
-                  (pr-str forms))
-      (finally
-        (spinner/stop! spin)
-        (println)))))
+                  (pr-str forms)))))
 
 (defn- find-namespaces
   "Returns all namespaces declared within the file (either a directory
@@ -135,9 +128,10 @@
   that are copied."
   [classpath-root merge-set files]
   (let [f (fn [result file]
-            (let [{:keys [target-file input-stream last-modified]} file
+            (let [{:keys [target-file input-stream last-modified input-source]} file
                   input-stream' ^InputStream (input-stream)
                   merged? (merge/execute-merge-rules classpath-root
+                                                     input-source
                                                      input-stream'
                                                      target-file
                                                      last-modified
@@ -162,6 +156,7 @@
          (remove #(.isDirectory ^JarEntry %))
          (map (fn [^JarEntry entry]
                 {:target-file   (io/file target-dir (.getName entry))
+                 :input-source  (str jar-root "#" entry)
                  :input-stream  #(.getInputStream jar-file entry)
                  :last-modified (.getTime entry)}))
          (copy-or-merge-files jar-root merge-set))))
@@ -174,6 +169,7 @@
        misc/filter-files
        (map (fn [^File file]
               {:target-file   (io/file target-dir (misc/relativize file file-system-root))
+               :input-source  (str file)
                :input-stream  #(io/input-stream file)
                :last-modified (.lastModified file)}))
        (copy-or-merge-files file-system-root merge-set)))
