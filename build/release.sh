@@ -62,7 +62,6 @@ function package_up() {
 
 function create_release() {
     gh release create $version \
-       --verify-tag \
        --title "Vessel $version" \
        --notes "A comprehensive changelog can be found at: https://github.com/nubank/vessel/blob/${version}/CHANGELOG.md" \
        $dist/linux-installer-${version}.sh#"Linux installer" \
