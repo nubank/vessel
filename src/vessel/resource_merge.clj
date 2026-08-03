@@ -42,7 +42,7 @@
 ;; :write-fn (fn [File, value]) -> nil (but writes the merged value)
 
 (def data-readers-base-rule
-  "data_raders.clj/cljc - merged together"
+  "data_readers.clj/cljc - merged together"
   {:match-fn #(re-find #"/data_readers.cljc?$" (.getPath ^File %))
    :read-fn  misc/read-data
    :merge-fn merge
