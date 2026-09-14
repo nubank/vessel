@@ -38,14 +38,14 @@
              (testing "generates a manifest file describing the base image"
                (is (zero? (vessel/-main "image"
                                         "--repository" "openjdk"
-                                        "--tag" "alpine"
+                                        "--tag" "8u212-jre-alpine"
                                         "--attribute" "comment:OpenJDK Alpine image"
                                         "--output" (str (io/file target-dir "openjdk-alpine.json")))))
 
                (is (= {:image
                        {:repository "openjdk"
                         :registry   "docker.io"
-                        :tag        "alpine"
+                        :tag        "8u212-jre-alpine"
                         :comment    "OpenJDK Alpine image"}}
                       (misc/read-json (io/file target-dir "openjdk-alpine.json")))))
 
@@ -69,7 +69,7 @@
                              {:repository "openjdk"
                               :registry   "docker.io"
                               :comment    "OpenJDK Alpine image"
-                              :tag        "alpine"}}
+                              :tag        "8u212-jre-alpine"}}
                             :service
                             {:name       "my-app"
                              :git-commit "07dccc801700cbe28e4a428e455b4627e0ab4ba9"}}
