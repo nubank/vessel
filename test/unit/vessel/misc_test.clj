@@ -110,6 +110,20 @@
 
 (def cwd (io/file (.getCanonicalPath (io/file "."))))
 
+(deftest canonical-file-test
+  (testing "returns the canonical (absolute, normalized) form of a file"
+    (is (= (io/file cwd "deps.edn")
+           (misc/canonical-file (io/file "deps.edn")))))
+
+  (testing "two different spellings of the same path canonicalize to an
+  equal, set-deduplicable File"
+    (let [relative (io/file "deps.edn")
+          absolute (io/file cwd "deps.edn")]
+      (is (not= relative absolute))
+      (is (= 1 (count (set [(misc/canonical-file relative)
+                            (misc/canonical-file absolute)]))))
+      (is (= #{absolute} (set [(misc/canonical-file relative)]))))))
+
 (deftest filter-files-test
   (is (every? #(.isFile %)
               (misc/filter-files (file-seq cwd)))))

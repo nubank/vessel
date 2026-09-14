@@ -106,6 +106,15 @@
           ~level ~(str (ns-name *ns*)) ~message
           [~@args]))
 
+(defn ^File canonical-file
+  "Returns the canonical form of the file (absolute, with . / .. and
+  symlinks resolved), so that two File objects representing the same
+  physical path — even if spelled differently (relative vs. absolute,
+  or reached via different classpath entries) — compare equal via
+  .equals and hash alike, e.g. when used as set members."
+  [^File file]
+  (.getCanonicalFile file))
+
 (defn file-exists?
   "Returns true if the file exists or false otherwise."
   [^File file]
