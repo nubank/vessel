@@ -240,10 +240,13 @@
   that the application depends on."
   [{:keys [classpath-files ^Symbol main-class resource-paths source-paths ^File target-dir compiler-options]}]
   {:pre [classpath-files main-class source-paths target-dir]}
-  (let [web-inf        (misc/make-dir target-dir "WEB-INF")
-        classes        (compile classpath-files main-class source-paths web-inf compiler-options)
-        dirs+jar-files (set/union resource-paths (set (vals classes)))
-        libs           (misc/filter-files (set/difference (set classpath-files) dirs+jar-files))
-        resource-files (copy-files dirs+jar-files web-inf)]
+  (let [classpath-files (distinct (map misc/canonical-file classpath-files))
+        resource-paths  (set (map misc/canonical-file resource-paths))
+        source-paths    (set (map misc/canonical-file source-paths))
+        web-inf         (misc/make-dir target-dir "WEB-INF")
+        classes         (compile classpath-files main-class source-paths web-inf compiler-options)
+        dirs+jar-files  (set/union resource-paths (set (vals classes)))
+        libs            (misc/filter-files (set/difference (set classpath-files) dirs+jar-files))
+        resource-files  (copy-files dirs+jar-files web-inf)]
     #:app{:classes (merge classes resource-files)
           :lib     (copy-libs libs web-inf)}))

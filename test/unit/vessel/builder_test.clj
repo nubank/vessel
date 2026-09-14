@@ -149,6 +149,33 @@
                            #:vessel.error{:category :vessel/compilation-error}
                            (builder/build-app (assoc options :main-class 'my-app.compilation-error)))))))
 
+(deftest resources-dir-is-not-self-merged-when-also-discovered-via-classpath-test
+  ;; Reproduces a real production incident (opsbot, 2026-09): `resources/` also
+  ;; contains a .clj namespace (`ownership.clj`, like opsbot's
+  ;; `squad_st_ownership.clj`) that's required from `src/`. Because that
+  ;; namespace gets AOT-compiled as a side effect of compiling `main-class`,
+  ;; `find-namespaces-on-classpath` maps its class file back to whichever File
+  ;; object represents `resources/` *within :classpath-files*. That File is a
+  ;; different object (different path string: absolute, via `clojure -Spath`)
+  ;; than the one passed explicitly via `:resource-paths` (relative, as a
+  ;; build script naturally would). `resources/` therefore ends up as two
+  ;; distinct classpath roots, and `config.edn` gets deep-merged with itself:
+  ;; `edn-base-rule`'s merge-fn concatenates vectors via `(into left right)`,
+  ;; silently doubling `:thread-buttons` in the built artifact.
+  (let [project-dir     (io/file "test/resources/self-merge-app")
+        target          (io/file "target/tests/builder-test/self-merge-app")
+        classpath-files (map io/file (string/split (classpath project-dir) #":"))
+        options         {:classpath-files classpath-files
+                         :source-paths    #{(io/file project-dir "src")}
+                         :resource-paths  #{(io/file project-dir "resources")}
+                         :target-dir      target}
+        _output         (builder/build-app (assoc options :main-class 'selfmerge.server))
+        config          (misc/read-edn (io/file target "WEB-INF/classes/config.edn"))]
+    (testing "a vector in a .edn resource is not duplicated merely because its
+    directory is reachable both via :resource-paths and via :classpath-files"
+      (is (= [:contingency :reason]
+             (:thread-buttons config))))))
+
 (deftest use-provided-compiler-options-when-building-app-test
   (let [project-dir     (io/file "test/resources/my-app")
         target          (io/file "target/tests/builder-test/build-app-test")
