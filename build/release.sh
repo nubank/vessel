@@ -29,7 +29,11 @@ function get_today() {
 function update_changelog() {
     local changelog=$cur_dir/../CHANGELOG.md
     local today=$(get_today)
-    sed -ie "s/\(##\s*\[Unreleased\]\)/\1\n\n## [$version] - $today/g" $changelog
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        gsed -ie "s/\(##\s*\[Unreleased\]\)/\1\n\n## [$version] - $today/g" $changelog
+    else
+        sed -ie "s/\(##\s*\[Unreleased\]\)/\1\n\n## [$version] - $today/g" $changelog
+    fi
     git add $changelog; git commit -m "Release version $version."
     git push origin master
     rm ${changelog}e
