@@ -60,15 +60,16 @@
                            :user             "jetty"
                            :target-dir       target-dir}
         modification-time (misc/now)]
-    (providing [(misc/last-modified-time (partial instance? File)) modification-time]
+    (providing [(misc/source-date-epoch) modification-time]
 
                (testing "takes an options map and returns a map representing an image spec
   for the files in question"
                  (is (= #:image{:from
                                 #:image   {:registry "my-company.com" :repository "jetty" :tag "v1"}
-                                :user     "jetty"
+                                :user          "jetty"
                                 :name
                                 #:image   {:registry "my-company.com" :repository "my-app" :tag "v2"}
+                                :creation-time modification-time
                                 :layers
                                 [#:image.layer{:name  "external-deps"
                                                :entries

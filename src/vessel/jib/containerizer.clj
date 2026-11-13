@@ -56,7 +56,7 @@
   "Makes a LayerConfiguration object from the supplied data structure."
   [{:image.layer/keys [name entries]}]
   (loop [^LayerConfiguration$Builder layer (.. LayerConfiguration builder (setName name))
-         entries                           entries]
+         entries                           (sort-by :layer.entry/target entries)]
     (if-not (seq entries)
       (.build layer)
       (let [layer-entry (first entries)]
@@ -98,7 +98,7 @@
   :image/tar-path. The :image/registry and :image/tag are optional for registry
   images. The key :image/tar-path indicates that the base image should be loaded
   from a tarball."
-  [from]
+  [from creation-time]
   (let [base-image (if                (:image/tar-path from)
                      (make-tar-image (:image/tar-path from))
                      (let [^ImageReference reference (make-image-reference from)]
@@ -106,15 +106,15 @@
                          (str reference)
                          (make-registry-image reference))))]
     (.. Jib (from base-image)
-        (setCreationTime (misc/now))
+        (setCreationTime creation-time)
         (setFormat ImageFormat/Docker))))
 
 (defn containerize
   "Given an image spec, containerize the application in question by
   producing a tarball containing image layers and metadata files."
-  [{:image/keys [from user layers] :as image-spec}]
+  [{:image/keys [creation-time from user layers] :as image-spec}]
   {:pre [from layers]}
-  (-> (make-container-builder from)
+  (-> (make-container-builder from (or creation-time (misc/source-date-epoch)))
       (add-layers layers)
       (set-user user)
       (containerize* image-spec)))

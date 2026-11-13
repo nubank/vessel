@@ -5,7 +5,10 @@
             [vessel.jib.containerizer :as jib.containerizer]
             [vessel.misc :as misc]
             [vessel.test-helpers :refer [ensure-clean-test-dir]])
-  (:import org.apache.commons.vfs2.VFS))
+  (:import java.nio.file.Files
+           java.time.Instant
+           java.util.Arrays
+           org.apache.commons.vfs2.VFS))
 
 (def tar-path "target/tests/containerizer-test/my-app.tar")
 
@@ -19,6 +22,32 @@
         getInputStream)))
 
 (use-fixtures :once (ensure-clean-test-dir))
+
+(defn reproducible-image-spec
+  [tar-path entries]
+  #:image{:from          #:image{:tar-path "test/resources/valid-base-image.tar"}
+          :user          "jetty"
+          :name          #:image{:repository "nubank/my-app" :tag "v1"}
+          :layers        [#:image.layer{:name "resources" :entries entries}]
+          :creation-time Instant/EPOCH
+          :tar-path      tar-path})
+
+(deftest reproducible-containerize-test
+  (testing "produces identical tarballs regardless of input entry order"
+    (let [greeting-file (io/file "test/resources/greeting/greeting.txt")
+          config-file   (io/file "test/resources/my-app/config/config.edn")
+          entries       [#:layer.entry{:source            (.getPath greeting-file)
+                                       :target            "/opt/app/greeting.txt"
+                                       :modification-time Instant/EPOCH}
+                         #:layer.entry{:source            (.getPath config-file)
+                                       :target            "/opt/app/config.edn"
+                                       :modification-time Instant/EPOCH}]
+          first-tar     "target/tests/containerizer-test/reproducible-1.tar"
+          second-tar    "target/tests/containerizer-test/reproducible-2.tar"]
+      (jib.containerizer/containerize (reproducible-image-spec first-tar entries))
+      (jib.containerizer/containerize (reproducible-image-spec second-tar (reverse entries)))
+      (is (Arrays/equals (Files/readAllBytes (.toPath (io/file first-tar)))
+                         (Files/readAllBytes (.toPath (io/file second-tar))))))))
 
 (deftest containerize-test
   (testing "calls Google Jib and containerize the files in question"

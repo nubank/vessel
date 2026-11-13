@@ -47,6 +47,23 @@
   []
   (Instant/now))
 
+(defn source-date-epoch
+  "Returns the reproducible build timestamp.
+
+  Reads SOURCE_DATE_EPOCH as seconds since the Unix epoch. When the variable is
+  absent or blank, returns Instant/EPOCH."
+  ([]
+   (source-date-epoch (System/getenv "SOURCE_DATE_EPOCH")))
+  ([value]
+   (if (string/blank? value)
+     Instant/EPOCH
+     (try
+       (Instant/ofEpochSecond (Long/parseLong value))
+       (catch NumberFormatException cause
+         (throw (ex-info "SOURCE_DATE_EPOCH must be an integer number of seconds since the Unix epoch"
+                         {:value value}
+                         cause)))))))
+
 (defn duration-between
   "Return a java.time.Duration object representing the duration between two temporal objects."
   [start end]

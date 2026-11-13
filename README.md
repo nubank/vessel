@@ -4,6 +4,11 @@
 
 A containerization tool for Clojure applications. It uses [Google Jib](https://github.com/GoogleContainerTools/jib) to perform this task.
 
+Vessel produces reproducible image metadata by default, using the Unix epoch for
+image creation and layer modification timestamps. Set `SOURCE_DATE_EPOCH` to an
+integer number of seconds since the Unix epoch when a specific deterministic
+build timestamp is required.
+
 ## Usage
 
 > `build`:

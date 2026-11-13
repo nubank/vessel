@@ -51,6 +51,21 @@
 (deftest now-test
   (is (instance? Instant (misc/now))))
 
+(deftest source-date-epoch-test
+  (testing "defaults to the Unix epoch"
+    (are [value] (= Instant/EPOCH (misc/source-date-epoch value))
+      nil
+      ""))
+
+  (testing "parses SOURCE_DATE_EPOCH as seconds"
+    (is (= (Instant/ofEpochSecond 1700000000)
+           (misc/source-date-epoch "1700000000"))))
+
+  (testing "rejects invalid values"
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                          #"SOURCE_DATE_EPOCH must be an integer"
+                          (misc/source-date-epoch "invalid")))))
+
 (deftest duration-between-test
   (is (instance? Duration (misc/duration-between (misc/now)
                                                  (misc/now)))))
