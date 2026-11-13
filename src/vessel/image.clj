@@ -32,6 +32,14 @@
     (into (image-layers-for-extra-paths options) layers)
     layers))
 
+(defn reproducible-modification-time
+  "Returns a deterministic modification time while keeping AOT class files
+  strictly newer than their corresponding Clojure sources."
+  [^File file reproducible-timestamp]
+  (if (string/ends-with? (.getName file) ".class")
+    (.plusSeconds reproducible-timestamp 1)
+    reproducible-timestamp))
+
 (defn internal-dep?
   "Is the file in question an internal dependency?"
   [^File file {:keys [internal-deps-re]}]
@@ -102,7 +110,7 @@
                                                         file-or-map-entry)]
                                        (misc/assoc-some #:layer.entry{:source            (.getPath file)
                                                                       :target            (.getPath (io/file app-root (misc/relativize file target-dir)))
-                                                                      :modification-time reproducible-timestamp}
+                                                                      :modification-time (reproducible-modification-time file reproducible-timestamp)}
                                                         :layer.entry/file-permissions (when preserve-file-permissions?
                                                                                         (misc/posix-file-permissions file)))))))
                 :churn   (second (get classifiers layer-name))})

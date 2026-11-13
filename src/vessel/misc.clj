@@ -50,17 +50,19 @@
 (defn source-date-epoch
   "Returns the reproducible build timestamp.
 
-  Reads SOURCE_DATE_EPOCH as seconds since the Unix epoch. When the variable is
-  absent or blank, returns Instant/EPOCH."
+  Reads SOURCE_DATE_EPOCH as non-negative seconds since the Unix epoch. When
+  the variable is absent, returns Instant/EPOCH."
   ([]
    (source-date-epoch (System/getenv "SOURCE_DATE_EPOCH")))
   ([value]
-   (if (string/blank? value)
+   (if (nil? value)
      Instant/EPOCH
      (try
+       (when-not (re-matches #"[0-9]+" value)
+         (throw (NumberFormatException.)))
        (Instant/ofEpochSecond (Long/parseLong value))
-       (catch NumberFormatException cause
-         (throw (ex-info "SOURCE_DATE_EPOCH must be an integer number of seconds since the Unix epoch"
+       (catch Exception cause
+         (throw (ex-info "SOURCE_DATE_EPOCH must be a non-negative integer number of seconds since the Unix epoch"
                          {:value value}
                          cause)))))))
 
