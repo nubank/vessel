@@ -5,7 +5,18 @@
             [mockfn.macros :refer [providing]]
             [vessel.image :as image]
             [vessel.misc :as misc])
-  (:import java.io.File))
+  (:import java.io.File
+           java.time.Instant))
+
+(deftest reproducible-modification-time-test
+  (let [timestamp (Instant/ofEpochSecond 1700000000)]
+    (testing "keeps sources at SOURCE_DATE_EPOCH"
+      (is (= timestamp
+             (image/reproducible-modification-time (io/file "src/vessel/core.clj") timestamp))))
+
+    (testing "makes AOT classes deterministically newer than sources"
+      (is (= (.plusSeconds timestamp 1)
+             (image/reproducible-modification-time (io/file "classes/vessel/core__init.class") timestamp))))))
 
 (deftest internal-dep?-test
   (let [m2          (io/file "/home/builder/.m2/repository")
@@ -60,15 +71,16 @@
                            :user             "jetty"
                            :target-dir       target-dir}
         modification-time (misc/now)]
-    (providing [(misc/last-modified-time (partial instance? File)) modification-time]
+    (providing [(misc/source-date-epoch) modification-time]
 
                (testing "takes an options map and returns a map representing an image spec
   for the files in question"
                  (is (= #:image{:from
                                 #:image   {:registry "my-company.com" :repository "jetty" :tag "v1"}
-                                :user     "jetty"
+                                :user          "jetty"
                                 :name
                                 #:image   {:registry "my-company.com" :repository "my-app" :tag "v2"}
+                                :creation-time modification-time
                                 :layers
                                 [#:image.layer{:name  "external-deps"
                                                :entries
@@ -80,7 +92,7 @@
                                                :entries
                                                [#:layer.entry{:source            "/home/builder/projects/my-app/.vessel/WEB-INF/classes/my_company/core__init.class"
                                                               :target            "/opt/app/WEB-INF/classes/my_company/core__init.class"
-                                                              :modification-time modification-time}]
+                                                              :modification-time (.plusSeconds modification-time 1)}]
                                                :churn 3}
                                  #:image.layer{:name  "resources"
                                                :entries
@@ -92,7 +104,7 @@
                                                :entries
                                                [#:layer.entry{:source            "/home/builder/projects/my-app/.vessel/WEB-INF/classes/my_app/server.class"
                                                               :target            "/opt/app/WEB-INF/classes/my_app/server.class"
-                                                              :modification-time modification-time}]
+                                                              :modification-time (.plusSeconds modification-time 1)}]
                                                :churn 7}]
                                 :tar-path "my-app.tar"}
                         (image/render-image-spec app options))))
@@ -116,7 +128,7 @@
                                        :entries
                                        [#:layer.entry{:source            "/home/builder/projects/my-app/.vessel/WEB-INF/classes/my_company/core__init.class"
                                                       :target            "/opt/app/WEB-INF/classes/my_company/core__init.class"
-                                                      :modification-time modification-time}]
+                                                      :modification-time (.plusSeconds modification-time 1)}]
                                        :churn 3}
                          #:image.layer{:name  "resources"
                                        :entries
@@ -128,7 +140,7 @@
                                        :entries
                                        [#:layer.entry{:source            "/home/builder/projects/my-app/.vessel/WEB-INF/classes/my_app/server.class"
                                                       :target            "/opt/app/WEB-INF/classes/my_app/server.class"
-                                                      :modification-time modification-time}]
+                                                      :modification-time (.plusSeconds modification-time 1)}]
                                        :churn 7}
                          #:image.layer{:name  "extra-files-2"
                                        :entries

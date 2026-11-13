@@ -4,6 +4,12 @@
 
 A containerization tool for Clojure applications. It uses [Google Jib](https://github.com/GoogleContainerTools/jib) to perform this task.
 
+Vessel produces reproducible image metadata by default, using the Unix epoch for
+image creation and layer modification timestamps. AOT class files are assigned
+a deterministic one-second offset so they remain newer than their Clojure source
+files. Set `SOURCE_DATE_EPOCH` to a non-negative integer number of seconds since
+the Unix epoch when a specific deterministic build timestamp is required.
+
 ## Usage
 
 > `build`:
